@@ -593,6 +593,26 @@
       .rx-tab { padding: 10px 14px; font-size: 12px; }
       .rx-tablescroll > table { min-width: 720px; }
     }
+
+    /* ===== datetime-local 主题适配 ===== */
+    /* 深色主题下日历选择器按钮颜色反转，确保可见 */
+    input[type="datetime-local"] {
+      color-scheme: dark;
+    }
+    input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.9) brightness(1.2);
+      cursor: pointer;
+      opacity: 0.85;
+    }
+    input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+      opacity: 1;
+    }
+    /* Firefox 日历图标 */
+    input[type="datetime-local"]::-moz-calendar-picker-indicator {
+      filter: invert(0.9) brightness(1.2);
+      cursor: pointer;
+      opacity: 0.85;
+    }
   </style>
 </head>
 <body>

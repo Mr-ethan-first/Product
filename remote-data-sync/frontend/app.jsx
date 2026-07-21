@@ -120,8 +120,8 @@ function Pager({ total, page, pageSize, onChange }) {
 
 /* ============ 工具函数 ============ */
 function isConcreteDb(db) { return !!db && !String(db).startsWith('re:') && db.indexOf('*') < 0 && db.indexOf('?') < 0; }
-function stateDesc(s) { return ['失效', '全量同步', '同步中', '中止'][s] ?? '未知'; }
-function stateTag(s) { return ['rx-info', 'rx-warning', 'rx-success', 'rx-danger'][s] ?? 'rx-info'; }
+function stateDesc(s) { return ['失效', '全量同步', '同步中', '中止'][s] || '未知'; }
+function stateTag(s) { return ['rx-info', 'rx-warning', 'rx-success', 'rx-danger'][s] || 'rx-info'; }
 function fmtDbIgnore(list) {
   if (!list || !list.length) return '—';
   return list.map(e => (e.database || '?') + ':[' + ((e.tables && e.tables.length) ? e.tables.join(',') : '—') + ']').join('; ');
@@ -212,17 +212,17 @@ function PairCard(props) {
       <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
         <div className="rx-box">
           <h4 style={{ color: '#f56c6c' }}>源主机（生产中心）</h4>
-          <div className="rx-field"><label className="rx-label">主机</label><input className="rx-input" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.sourceHost} onChange={e => onUpdatePair(idx, { sourceHost: e.target.value })} placeholder="如 127.0.0.1" /></div>
-          <div className="rx-field"><label className="rx-label">端口</label><input className="rx-input" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.sourcePort} onChange={e => onUpdatePair(idx, { sourcePort: e.target.value })} placeholder="3306" /></div>
-          <div className="rx-field"><label className="rx-label">账号</label><input className="rx-input" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.sourceUser} onChange={e => onUpdatePair(idx, { sourceUser: e.target.value })} placeholder="如 root" /></div>
-          <div className="rx-field"><label className="rx-label">密码</label><input className="rx-input" type="password" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.sourcePassword} onChange={e => onUpdatePair(idx, { sourcePassword: e.target.value })} placeholder="数据库密码" /></div>
+          <div className="rx-field"><label className="rx-label">主机</label><input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.sourceHost} onChange={e => onUpdatePair(idx, { sourceHost: e.target.value })} placeholder="如 127.0.0.1" /></div>
+          <div className="rx-field"><label className="rx-label">端口</label><input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.sourcePort} onChange={e => onUpdatePair(idx, { sourcePort: e.target.value })} placeholder="3306" /></div>
+          <div className="rx-field"><label className="rx-label">账号</label><input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.sourceUser} onChange={e => onUpdatePair(idx, { sourceUser: e.target.value })} placeholder="如 root" /></div>
+          <div className="rx-field"><label className="rx-label">密码</label><input className="rx-input" type="password" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.sourcePassword} onChange={e => onUpdatePair(idx, { sourcePassword: e.target.value })} placeholder="数据库密码" /></div>
         </div>
         <div className="rx-box">
           <h4 style={{ color: '#67c23a' }}>目标主机（灾备中心）</h4>
-          <div className="rx-field"><label className="rx-label">主机</label><input className="rx-input" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.targetHost} onChange={e => onUpdatePair(idx, { targetHost: e.target.value })} placeholder="如 192.168.88.88" /></div>
-          <div className="rx-field"><label className="rx-label">端口</label><input className="rx-input" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.targetPort} onChange={e => onUpdatePair(idx, { targetPort: e.target.value })} placeholder="3306" /></div>
-          <div className="rx-field"><label className="rx-label">账号</label><input className="rx-input" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.targetUser} onChange={e => onUpdatePair(idx, { targetUser: e.target.value })} placeholder="如 root" /></div>
-          <div className="rx-field"><label className="rx-label">密码</label><input className="rx-input" type="password" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.targetPassword} onChange={e => onUpdatePair(idx, { targetPassword: e.target.value })} placeholder="数据库密码" /></div>
+          <div className="rx-field"><label className="rx-label">主机</label><input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.targetHost} onChange={e => onUpdatePair(idx, { targetHost: e.target.value })} placeholder="如 192.168.88.88" /></div>
+          <div className="rx-field"><label className="rx-label">端口</label><input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.targetPort} onChange={e => onUpdatePair(idx, { targetPort: e.target.value })} placeholder="3306" /></div>
+          <div className="rx-field"><label className="rx-label">账号</label><input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.targetUser} onChange={e => onUpdatePair(idx, { targetUser: e.target.value })} placeholder="如 root" /></div>
+          <div className="rx-field"><label className="rx-label">密码</label><input className="rx-input" type="password" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.targetPassword} onChange={e => onUpdatePair(idx, { targetPassword: e.target.value })} placeholder="数据库密码" /></div>
         </div>
       </div>
 
@@ -281,11 +281,11 @@ function PairCard(props) {
           <div className="rx-collapse-body">
             {(pair.transformRules || []).map((r, ridx) => (
               <div className="rule-row" key={ridx}>
-                <input className="rx-input" style={{ width: 130, border: '1px solid #dcdfe6', borderRadius: 4, padding: '5px 8px' }} value={r.dbName} onChange={e => onUpdateRule(idx, ridx, { dbName: e.target.value })} placeholder="库名(*)" />
-                <input className="rx-input" style={{ width: 130, border: '1px solid #dcdfe6', borderRadius: 4, padding: '5px 8px' }} value={r.tableName} onChange={e => onUpdateRule(idx, ridx, { tableName: e.target.value })} placeholder="表名(*)" />
-                <input className="rx-input" style={{ width: 130, border: '1px solid #dcdfe6', borderRadius: 4, padding: '5px 8px' }} value={r.fieldName} onChange={e => onUpdateRule(idx, ridx, { fieldName: e.target.value })} placeholder="字段名" />
-                <input className="rx-input" style={{ width: 130, border: '1px solid #dcdfe6', borderRadius: 4, padding: '5px 8px' }} value={r.sourceValue} onChange={e => onUpdateRule(idx, ridx, { sourceValue: e.target.value })} placeholder="源值" />
-                <input className="rx-input" style={{ width: 130, border: '1px solid #dcdfe6', borderRadius: 4, padding: '5px 8px' }} value={r.targetValue} onChange={e => onUpdateRule(idx, ridx, { targetValue: e.target.value })} placeholder="目标值" />
+                <input className="rx-input" style={{ width: 130, border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '5px 8px' }} value={r.dbName} onChange={e => onUpdateRule(idx, ridx, { dbName: e.target.value })} placeholder="库名(*)" />
+                <input className="rx-input" style={{ width: 130, border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '5px 8px' }} value={r.tableName} onChange={e => onUpdateRule(idx, ridx, { tableName: e.target.value })} placeholder="表名(*)" />
+                <input className="rx-input" style={{ width: 130, border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '5px 8px' }} value={r.fieldName} onChange={e => onUpdateRule(idx, ridx, { fieldName: e.target.value })} placeholder="字段名" />
+                <input className="rx-input" style={{ width: 130, border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '5px 8px' }} value={r.sourceValue} onChange={e => onUpdateRule(idx, ridx, { sourceValue: e.target.value })} placeholder="源值" />
+                <input className="rx-input" style={{ width: 130, border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '5px 8px' }} value={r.targetValue} onChange={e => onUpdateRule(idx, ridx, { targetValue: e.target.value })} placeholder="目标值" />
                 <button className="rx-btn rx-btn-danger" onClick={() => onRemoveRule(idx, ridx)}>删除</button>
               </div>
             ))}
@@ -625,15 +625,15 @@ function App() {
           <div className="tip">请登录后使用同步配置与监控功能</div>
           {authMode === 'login' ? (
             <div>
-              <div className="rx-field"><label className="rx-label">用户名</label><input className="rx-input" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '8px 10px', width: '100%', boxSizing: 'border-box' }} value={authForm.username} onChange={e => setAuthForm(f => ({ ...f, username: e.target.value }))} placeholder="用户名" onKeyDown={e => e.key === 'Enter' && doLogin()} /></div>
-              <div className="rx-field"><label className="rx-label">密码</label><input className="rx-input" type="password" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '8px 10px', width: '100%', boxSizing: 'border-box' }} value={authForm.password} onChange={e => setAuthForm(f => ({ ...f, password: e.target.value }))} placeholder="密码" onKeyDown={e => e.key === 'Enter' && doLogin()} /></div>
+              <div className="rx-field"><label className="rx-label">用户名</label><input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '8px 10px', width: '100%', boxSizing: 'border-box' }} value={authForm.username} onChange={e => setAuthForm(f => ({ ...f, username: e.target.value }))} placeholder="用户名" onKeyDown={e => e.key === 'Enter' && doLogin()} /></div>
+              <div className="rx-field"><label className="rx-label">密码</label><input className="rx-input" type="password" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '8px 10px', width: '100%', boxSizing: 'border-box' }} value={authForm.password} onChange={e => setAuthForm(f => ({ ...f, password: e.target.value }))} placeholder="密码" onKeyDown={e => e.key === 'Enter' && doLogin()} /></div>
               <button className="rx-btn rx-btn-primary login-submit" style={{ width: '100%' }} disabled={authLoading} onClick={doLogin}>{authLoading ? '登录中...' : '登 录'}</button>
               <div style={{ marginTop: 12, textAlign: 'right' }}><span className="rx-link" onClick={() => setAuthMode('register')}>没有账号？注册</span></div>
             </div>
           ) : (
             <div>
-              <div className="rx-field"><label className="rx-label">用户名</label><input className="rx-input" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '8px 10px', width: '100%', boxSizing: 'border-box' }} value={authForm.username} onChange={e => setAuthForm(f => ({ ...f, username: e.target.value }))} placeholder="3-32 位" /></div>
-              <div className="rx-field"><label className="rx-label">密码</label><input className="rx-input" type="password" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '8px 10px', width: '100%', boxSizing: 'border-box' }} value={authForm.password} onChange={e => setAuthForm(f => ({ ...f, password: e.target.value }))} placeholder="至少 6 位" /></div>
+              <div className="rx-field"><label className="rx-label">用户名</label><input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '8px 10px', width: '100%', boxSizing: 'border-box' }} value={authForm.username} onChange={e => setAuthForm(f => ({ ...f, username: e.target.value }))} placeholder="3-32 位" /></div>
+              <div className="rx-field"><label className="rx-label">密码</label><input className="rx-input" type="password" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '8px 10px', width: '100%', boxSizing: 'border-box' }} value={authForm.password} onChange={e => setAuthForm(f => ({ ...f, password: e.target.value }))} placeholder="至少 6 位" /></div>
               <button className="rx-btn rx-btn-primary login-submit" style={{ width: '100%' }} disabled={authLoading} onClick={doRegister}>{authLoading ? '注册中...' : '注 册'}</button>
               <div style={{ marginTop: 12, textAlign: 'right' }}><span className="rx-link" onClick={() => setAuthMode('login')}>已有账号？登录</span></div>
             </div>
@@ -801,9 +801,9 @@ function App() {
             <div className="card">
               <h3>同步进度列表</h3>
               <div className="toolbar">
-                <input className="rx-input" style={{ width: 150, border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 8px' }} value={query.ip} onChange={e => setQuery(q => ({ ...q, ip: e.target.value }))} placeholder="源IP筛选" />
-                <input className="rx-input" style={{ width: 160, border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 8px' }} value={query.sourceDbName} onChange={e => setQuery(q => ({ ...q, sourceDbName: e.target.value }))} placeholder="源库名(模糊)" />
-                <select style={{ width: 130, border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 8px' }} value={query.state ?? ''} onChange={e => setQuery(q => ({ ...q, state: e.target.value === '' ? null : Number(e.target.value) }))}>
+                <input className="rx-input" style={{ width: 150, border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px' }} value={query.ip} onChange={e => setQuery(q => ({ ...q, ip: e.target.value }))} placeholder="源IP筛选" />
+                <input className="rx-input" style={{ width: 160, border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px' }} value={query.sourceDbName} onChange={e => setQuery(q => ({ ...q, sourceDbName: e.target.value }))} placeholder="源库名(模糊)" />
+                <select style={{ width: 130, border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px' }} value={query.state == null ? '' : query.state} onChange={e => setQuery(q => ({ ...q, state: e.target.value === '' ? null : Number(e.target.value) }))}>
                   <option value="">状态</option>
                   <option value="0">失效</option>
                   <option value="1">全量同步</option>
@@ -956,19 +956,19 @@ function App() {
             <div className="filter-bar" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 16 }}>
               <div className="rx-field" style={{ minWidth: 120 }}>
                 <label className="rx-label">用户名</label>
-                <input className="rx-input" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
+                <input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
                   value={logFilter.username} placeholder="精确匹配"
                   onChange={e => setLogFilter(f => ({ ...f, username: e.target.value }))} />
               </div>
               <div className="rx-field" style={{ minWidth: 120 }}>
                 <label className="rx-label">客户端 IP</label>
-                <input className="rx-input" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
+                <input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
                   value={logFilter.clientIp} placeholder="模糊匹配"
                   onChange={e => setLogFilter(f => ({ ...f, clientIp: e.target.value }))} />
               </div>
               <div className="rx-field" style={{ minWidth: 140 }}>
                 <label className="rx-label">操作类型</label>
-                <select className="rx-input" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
+                <select className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
                   value={logFilter.operationType}
                   onChange={e => setLogFilter(f => ({ ...f, operationType: e.target.value }))}>
                   <option value="">全部</option>
@@ -977,7 +977,7 @@ function App() {
               </div>
               <div className="rx-field" style={{ minWidth: 100 }}>
                 <label className="rx-label">结果</label>
-                <select className="rx-input" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
+                <select className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
                   value={logFilter.resultStatus}
                   onChange={e => setLogFilter(f => ({ ...f, resultStatus: e.target.value }))}>
                   <option value="">全部</option>
@@ -987,13 +987,13 @@ function App() {
               </div>
               <div className="rx-field" style={{ minWidth: 150 }}>
                 <label className="rx-label">开始时间</label>
-                <input type="datetime-local" className="rx-input" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
+                <input type="datetime-local" className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box', colorScheme: 'dark' }}
                   value={toDtl(logFilter.startTime)}
                   onChange={e => setLogFilter(f => ({ ...f, startTime: fromDtl(e.target.value) }))} />
               </div>
               <div className="rx-field" style={{ minWidth: 150 }}>
                 <label className="rx-label">结束时间</label>
-                <input type="datetime-local" className="rx-input" style={{ border: '1px solid #dcdfe6', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
+                <input type="datetime-local" className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box', colorScheme: 'dark' }}
                   value={toDtl(logFilter.endTime)}
                   onChange={e => setLogFilter(f => ({ ...f, endTime: fromDtl(e.target.value) }))} />
               </div>
@@ -1027,7 +1027,7 @@ function App() {
                       <td><span style={{ fontFamily: 'monospace', fontSize: 12, background: 'var(--bg-2)', padding: '2px 6px', borderRadius: 3 }}>{row.operationType}</span></td>
                       <td style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.operationDesc}>{row.operationDesc || '—'}</td>
                       <td>{row.resultStatus === 'SUCCESS' ? <span style={{ color: 'var(--accent)' }}>成功</span> : <span style={{ color: 'var(--danger)' }}>失败</span>}</td>
-                      <td style={{ fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums' }}>{row.durationMs ?? '—'}</td>
+                      <td style={{ fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums' }}>{row.durationMs == null ? '—' : row.durationMs}</td>
                       <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{row.createTime}</td>
                       <td><span className="rx-link" onClick={() => setLogDetail(row)}>查看</span></td>
                     </tr>
