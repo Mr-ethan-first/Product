@@ -1,0 +1,101 @@
+package com.example.flinkcdcsync.bean;
+
+import lombok.Data;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * 数据库同步映射（灾备主机对）：生产中心主机 -> 灾备中心主机，1:1。
+ * <p>
+ * 与旧版"按库配置"不同，本版为<b>主机级</b>配置：只需配置源主机与目标主机，
+ * 该源主机下<b>所有用户库（除系统库与忽略库）的所有表（除忽略表）</b>将被自动同步，
+ * 新增的库 / 表也会在下一轮扫描中被实时纳入。是否同步"哪些表"不再需要逐项配置，
+ * 只需配置"忽略项"即可。
+ * </p>
+ * <p>
+ * 字段命名与 application.yml 中 geodrsync.mappings[].* 的 kebab-case 对应。
+ * </p>
+ *
+ * @author 50707
+ */
+@Data
+public class DatabaseMapping implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    /** 所属用户 ID（null 表示全局/yml 配置的映射，所有用户可见） */
+    private Long userId;
+
+    /** 源主机（生产中心） */
+    private String sourceHost;
+    private int sourcePort = 3306;
+    private String sourceUser;
+    private String sourcePassword;
+
+    /** 目标主机（灾备中心） */
+    private String targetHost;
+    private int targetPort = 3306;
+    private String targetUser;
+    private String targetPassword;
+
+    /** 整库跳过（不扫描、不同步），支持多个 + 正则（见 MatchPattern） */
+    private List<String> ignoreDatabases = new ArrayList<>();
+
+    /** 表跳过：DML 与 DDL 均不处理，支持多个 + 正则（旧式扁平写法，支持「库.表」限定，向后兼容） */
+    private List<String> ignoreTables = new ArrayList<>();
+
+    /** 仅跳过 DDL（结构变更不同步），但 DML 数据仍同步，支持多个 + 正则（旧式扁平写法，向后兼容） */
+    private List<String> ignoreDdlTables = new ArrayList<>();
+
+    /** 按「库 → 表」层级忽略（DML + DDL 均不处理）：每个库可配置不同的忽略表列表 */
+    private List<DbTableIgnore> ignoreTablesByDb = new ArrayList<>();
+
+    /** 按「库 → 表」层级忽略（仅忽略 DDL，数据仍同步）：每个库可配置不同的忽略表列表 */
+    private List<DbTableIgnore> ignoreDdlTablesByDb = new ArrayList<>();
+
+    /** 通用忽略（DML + DDL 均不处理），对所有库生效，支持精确 + 正则 */
+    private List<String> commonIgnoreTables = new ArrayList<>();
+
+    /** 通用忽略（仅忽略 DDL，数据仍同步），对所有库生效，支持精确 + 正则 */
+    private List<String> commonDdlIgnoreTables = new ArrayList<>();
+
+    /** 字段内容转换规则（写入目标库前对匹配字段做值替换） */
+    private List<TransformRule> transformRules = new ArrayList<>();
+
+    /** 兼容旧代码：源 IP */
+    public String getSourceIP() {
+        return sourceHost;
+    }
+
+    /** 兼容旧代码：目标 IP */
+    public String getTargetIP() {
+        return targetHost;
+    }
+
+    /** 仅含主机的源库连接（无具体库名，用于发现该主机下所有用户库） */
+    public DatabaseConfig toSourceHostConfig() {
+        return new DatabaseConfig(sourceHost, sourcePort, sourceUser, sourcePassword, null);
+    }
+
+    /** 仅含主机的目标库连接（无具体库名） */
+    public DatabaseConfig toTargetHostConfig() {
+        return new DatabaseConfig(targetHost, targetPort, targetUser, targetPassword, null);
+    }
+
+    /** 指定源库名的连接配置（扫描/同步具体库时使用） */
+    public DatabaseConfig toSourceDB(String dbName) {
+        return new DatabaseConfig(sourceHost, sourcePort, sourceUser, sourcePassword, dbName);
+    }
+
+    /** 指定目标库名的连接配置（库名与源库同名镜像） */
+    public DatabaseConfig toTargetDB(String dbName) {
+        return new DatabaseConfig(targetHost, targetPort, targetUser, targetPassword, dbName);
+    }
+
+    /** 实例 key：sourceHost->targetHost（主机对唯一） */
+    public String getInstanceKey() {
+        return sourceHost + "->" + targetHost;
+    }
+}

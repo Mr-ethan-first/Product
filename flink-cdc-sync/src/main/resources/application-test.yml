@@ -1,0 +1,31 @@
+# ===================== 自动化一致性测试专用 profile =====================
+# 本环境 192.168.88.88:3306 真实可达（root/123456），故直接演示"跨主机灾备"：
+# 源主机 127.0.0.1 下的所有用户库，会以同名镜像方式实时同步到灾备主机 192.168.88.88。
+# 忽略 geodrsync 元数据库，避免把生产中心的管控库反向同步到灾备中心自身元库。
+
+# 测试环境关闭会话鉴权拦截器，聚焦同步一致性与 REST 契约验证（生产默认开启）
+app:
+  auth:
+    enabled: false
+
+geodrsync:
+  mappings:
+    - source-host: 127.0.0.1
+      source-port: 3306
+      source-user: root
+      source-password: 123456
+      target-host: 192.168.88.88
+      target-port: 3306
+      target-user: root
+      target-password: 123456
+      # 测试环境的 127.0.0.1 上存在大量与本测试无关的业务库（其中 rfm_db 达 29 万+ 行），
+      # 若全部纳入同步，单个轮询周期会被大库的全表扫描 + 主键对账拖到数分钟，
+      # 导致测试库 geo_source / biz_source 在断言超时窗口（30~40s）内轮不到同步。
+      # 故用负向前瞻正则「仅保留 geo_source 与 biz_source，忽略其余所有用户库」，
+      # 保证每个周期只处理这两个测试库、秒级追平（这也顺带验证了正则忽略能力）。
+      ignore-databases:
+        - geodrsync
+        - "re:^(?!(geo_source|biz_source)$).*$"
+      ignore-tables: []
+      ignore-ddl-tables: []
+      transform-rules: []
