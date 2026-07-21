@@ -211,14 +211,14 @@ function PairCard(props) {
 
       <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
         <div className="rx-box">
-          <h4 style={{ color: '#f56c6c' }}>源主机（生产中心）</h4>
+          <h4 style={{ color: 'var(--danger)' }}>源主机（生产中心）</h4>
           <div className="rx-field"><label className="rx-label">主机</label><input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.sourceHost} onChange={e => onUpdatePair(idx, { sourceHost: e.target.value })} placeholder="如 127.0.0.1" /></div>
           <div className="rx-field"><label className="rx-label">端口</label><input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.sourcePort} onChange={e => onUpdatePair(idx, { sourcePort: e.target.value })} placeholder="3306" /></div>
           <div className="rx-field"><label className="rx-label">账号</label><input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.sourceUser} onChange={e => onUpdatePair(idx, { sourceUser: e.target.value })} placeholder="如 root" /></div>
           <div className="rx-field"><label className="rx-label">密码</label><input className="rx-input" type="password" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.sourcePassword} onChange={e => onUpdatePair(idx, { sourcePassword: e.target.value })} placeholder="数据库密码" /></div>
         </div>
         <div className="rx-box">
-          <h4 style={{ color: '#67c23a' }}>目标主机（灾备中心）</h4>
+          <h4 style={{ color: 'var(--accent)' }}>目标主机（灾备中心）</h4>
           <div className="rx-field"><label className="rx-label">主机</label><input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.targetHost} onChange={e => onUpdatePair(idx, { targetHost: e.target.value })} placeholder="如 192.168.88.88" /></div>
           <div className="rx-field"><label className="rx-label">端口</label><input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.targetPort} onChange={e => onUpdatePair(idx, { targetPort: e.target.value })} placeholder="3306" /></div>
           <div className="rx-field"><label className="rx-label">账号</label><input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }} value={pair.targetUser} onChange={e => onUpdatePair(idx, { targetUser: e.target.value })} placeholder="如 root" /></div>
@@ -273,7 +273,7 @@ function PairCard(props) {
       </div>
 
       <h4 className="block-h">③ 字段转换规则（源值 → 目标值，如 IP 替换）</h4>
-      <div className="rx-collapse" style={{ border: '1px solid #ebeef5', borderRadius: 6, padding: '0 12px' }}>
+      <div className="rx-collapse" style={{ border: '1px solid var(--border-strong)', borderRadius: 6, padding: '0 12px' }}>
         <div className="rx-collapse-head" style={{ padding: '10px 0' }} onClick={() => onUpdatePair(idx, { advActive: !pair.advActive })}>
           {pair.advActive ? '▾' : '▸'} 字段转换规则（库-表-字段，支持 * 通配；主键列不参与转换）
         </div>
@@ -843,7 +843,7 @@ function App() {
                       <td><button className="rx-btn rx-btn-primary" onClick={() => detail(row)}>详情</button></td>
                     </tr>
                   ))}
-                  {list.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', color: '#909399' }}>暂无数据</td></tr>}
+                  {list.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-3)' }}>暂无数据</td></tr>}
                 </tbody>
               </table>
               </div>
@@ -941,7 +941,7 @@ function App() {
                       <td><button className="rx-btn rx-btn-danger" disabled={row.source !== 'dynamic'} onClick={() => removeMapping(row)}>移除</button></td>
                     </tr>
                   ))}
-                  {mappingsList.length === 0 && <tr><td colSpan={11} style={{ textAlign: 'center', color: '#909399' }}>暂无主机对配置</td></tr>}
+                  {mappingsList.length === 0 && <tr><td colSpan={11} style={{ textAlign: 'center', color: 'var(--text-3)' }}>暂无主机对配置</td></tr>}
                 </tbody>
               </table>
               </div>
@@ -1018,7 +1018,7 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 24, color: '#999' }}>暂无日志记录</td></tr>}
+                  {logs.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 24, color: 'var(--text-3)' }}>暂无日志记录</td></tr>}
                   {logs.map((row) => (
                     <tr key={row.id}>
                       <td style={{ fontFamily: 'monospace' }}>{row.id}</td>

@@ -386,7 +386,7 @@ function PairCard(props) {
     className: "rx-box"
   }, /*#__PURE__*/React.createElement("h4", {
     style: {
-      color: '#f56c6c'
+      color: 'var(--danger)'
     }
   }, "\u6E90\u4E3B\u673A\uFF08\u751F\u4EA7\u4E2D\u5FC3\uFF09"), /*#__PURE__*/React.createElement("div", {
     className: "rx-field"
@@ -465,7 +465,7 @@ function PairCard(props) {
     className: "rx-box"
   }, /*#__PURE__*/React.createElement("h4", {
     style: {
-      color: '#67c23a'
+      color: 'var(--accent)'
     }
   }, "\u76EE\u6807\u4E3B\u673A\uFF08\u707E\u5907\u4E2D\u5FC3\uFF09"), /*#__PURE__*/React.createElement("div", {
     className: "rx-field"
@@ -641,7 +641,7 @@ function PairCard(props) {
   }, "\u2462 \u5B57\u6BB5\u8F6C\u6362\u89C4\u5219\uFF08\u6E90\u503C \u2192 \u76EE\u6807\u503C\uFF0C\u5982 IP \u66FF\u6362\uFF09"), /*#__PURE__*/React.createElement("div", {
     className: "rx-collapse",
     style: {
-      border: '1px solid #ebeef5',
+      border: '1px solid var(--border-strong)',
       borderRadius: 6,
       padding: '0 12px'
     }
@@ -2044,7 +2044,7 @@ function App() {
     colSpan: 9,
     style: {
       textAlign: 'center',
-      color: '#909399'
+      color: 'var(--text-3)'
     }
   }, "\u6682\u65E0\u6570\u636E"))))), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2207,7 +2207,7 @@ function App() {
     colSpan: 11,
     style: {
       textAlign: 'center',
-      color: '#909399'
+      color: 'var(--text-3)'
     }
   }, "\u6682\u65E0\u4E3B\u673A\u5BF9\u914D\u7F6E"))))), /*#__PURE__*/React.createElement("div", {
     className: "desc-cell"
@@ -2417,7 +2417,7 @@ function App() {
     style: {
       textAlign: 'center',
       padding: 24,
-      color: '#999'
+      color: 'var(--text-3)'
     }
   }, "\u6682\u65E0\u65E5\u5FD7\u8BB0\u5F55")), logs.map(row => /*#__PURE__*/React.createElement("tr", {
     key: row.id
