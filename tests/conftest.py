@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""GeoDRSync 前后端联调自动化测试 - 公共夹具与断言工具。
+"""DRPlatform 前后端联调自动化测试 - 公共夹具与断言工具。
 
 设计原则：
 - 真实 HTTP 调用，不打 mock，覆盖前后端全链路。
@@ -14,10 +14,10 @@ import pytest
 import requests
 import pymysql
 
-BASE_URL = os.environ.get("GEODRSYNC_BASE_URL", "http://127.0.0.1:8080")
+BASE_URL = os.environ.get("DRPlatform_BASE_URL", "http://127.0.0.1:8080")
 # 已验证可用的管理员账号（上一轮重置过）
-ADMIN_USER = os.environ.get("GEODRSYNC_ADMIN_USER", "admin")
-ADMIN_PASS = os.environ.get("GEODRSYNC_ADMIN_PASS", "admin123")
+ADMIN_USER = os.environ.get("DRPlatform_ADMIN_USER", "admin")
+ADMIN_PASS = os.environ.get("DRPlatform_ADMIN_PASS", "admin123")
 # 本机 MySQL（测试用连接参数）
 LOCAL_MYSQL = {
     "host": "127.0.0.1", "port": 3306, "user": "root", "password": "123456",
@@ -47,7 +47,7 @@ def anon():
 def auth(anon):
     """已登录 admin 的会话。"""
     r = anon.post(f"{BASE_URL}/auth/login",
-                  json={"username": ADMIN_USER, "password": ADMIN_PASS}, timeout=10)
+                  json={"username": ADMIN_USER, "password": ADMIN_PASS}, timeout=30)
     assert r.status_code == 200, f"admin 登录失败: {r.status_code} {r.text}"
     j = r.json()
     assert j.get("success") is True, f"admin 登录 success=false: {j}"

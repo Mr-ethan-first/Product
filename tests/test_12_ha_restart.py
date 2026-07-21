@@ -4,7 +4,7 @@
 验证管控元数据表（dbha_switch_status / sync_restart_task / sys_user）的
 存在性、可查询性以及 SysUserInitializer 的 admin 账号自动初始化行为。
 
-涉及表（均位于 geodrsync 元数据库）：
+涉及表（均位于 DRPlatform 元数据库）：
 - dbha_switch_status   主备切换状态记录（DBHASwitchStatusJob 每 15s 扫描）
 - sync_restart_task    同步重启任务记录（CREATE/DROP 操作由 RestartTaskManager 登记）
 - sys_user             后台管理用户（SysUserInitializer @PostConstruct 自动建表 + 种子 admin）
@@ -21,7 +21,7 @@ class TestDbhaSwitchStatus:
         """dbha_switch_status 表存在且可查询（COUNT 不报错）。"""
         rows = db_query(
             LOCAL_MYSQL["host"], LOCAL_MYSQL["port"], LOCAL_MYSQL["user"], LOCAL_MYSQL["password"],
-            "SELECT COUNT(*) AS cnt FROM geodrsync.dbha_switch_status",
+            "SELECT COUNT(*) AS cnt FROM DRPlatform.dbha_switch_status",
         )
         assert isinstance(rows, list), f"查询失败: {rows}"
         assert len(rows) == 1, f"COUNT 应返回 1 行: {rows}"
@@ -38,7 +38,7 @@ class TestDbhaSwitchStatus:
             "SELECT id, virtual_ip, old_main_ip, old_standby_ip, main_ip, standby_ip, "
             "switch_time, source_db_name, source_binlog_file, source_binlog_pos, "
             "create_time, update_time "
-            "FROM geodrsync.dbha_switch_status LIMIT 10",
+            "FROM DRPlatform.dbha_switch_status LIMIT 10",
         )
         assert isinstance(rows, list), f"查询失败: {rows}"
         # 不强制为空（历史切换可能留下记录），但字段完整性校验
@@ -60,7 +60,7 @@ class TestDbhaSwitchStatus:
             LOCAL_MYSQL["host"], LOCAL_MYSQL["port"], LOCAL_MYSQL["user"], LOCAL_MYSQL["password"],
             "SELECT INDEX_NAME, COLUMN_NAME "
             "FROM information_schema.STATISTICS "
-            "WHERE TABLE_SCHEMA = 'geodrsync' AND TABLE_NAME = 'dbha_switch_status' "
+            "WHERE TABLE_SCHEMA = 'DRPlatform' AND TABLE_NAME = 'dbha_switch_status' "
             "AND INDEX_NAME = 'IDX_VIRTUAL_IP_DB' "
             "ORDER BY SEQ_IN_INDEX",
         )
@@ -79,7 +79,7 @@ class TestRestartTask:
         """sync_restart_task 表存在且可查询（COUNT 不报错）。"""
         rows = db_query(
             LOCAL_MYSQL["host"], LOCAL_MYSQL["port"], LOCAL_MYSQL["user"], LOCAL_MYSQL["password"],
-            "SELECT COUNT(*) AS cnt FROM geodrsync.sync_restart_task",
+            "SELECT COUNT(*) AS cnt FROM DRPlatform.sync_restart_task",
         )
         assert isinstance(rows, list), f"查询失败: {rows}"
         assert len(rows) == 1, f"COUNT 应返回 1 行: {rows}"
@@ -95,7 +95,7 @@ class TestRestartTask:
             LOCAL_MYSQL["host"], LOCAL_MYSQL["port"], LOCAL_MYSQL["user"], LOCAL_MYSQL["password"],
             "SELECT id, source_host, source_db, target_host, target_db, "
             "status, error_msg, create_time, update_time "
-            "FROM geodrsync.sync_restart_task ORDER BY create_time DESC LIMIT 10",
+            "FROM DRPlatform.sync_restart_task ORDER BY create_time DESC LIMIT 10",
         )
         assert isinstance(rows, list), f"查询失败: {rows}"
         # 字段完整性校验
@@ -119,7 +119,7 @@ class TestRestartTask:
             LOCAL_MYSQL["host"], LOCAL_MYSQL["port"], LOCAL_MYSQL["user"], LOCAL_MYSQL["password"],
             "SELECT INDEX_NAME, COLUMN_NAME "
             "FROM information_schema.STATISTICS "
-            "WHERE TABLE_SCHEMA = 'geodrsync' AND TABLE_NAME = 'sync_restart_task' "
+            "WHERE TABLE_SCHEMA = 'DRPlatform' AND TABLE_NAME = 'sync_restart_task' "
             "AND INDEX_NAME = 'IDX_UNIQUE_KEY' "
             "ORDER BY SEQ_IN_INDEX",
         )
@@ -146,7 +146,7 @@ class TestSysUserAutoInit:
         rows = db_query(
             LOCAL_MYSQL["host"], LOCAL_MYSQL["port"], LOCAL_MYSQL["user"], LOCAL_MYSQL["password"],
             "SELECT id, username, password_hash, salt, create_time, update_time "
-            "FROM geodrsync.sys_user",
+            "FROM DRPlatform.sys_user",
         )
         assert isinstance(rows, list), f"查询 sys_user 失败: {rows}"
         assert len(rows) > 0, \
@@ -173,7 +173,7 @@ class TestSysUserAutoInit:
             LOCAL_MYSQL["host"], LOCAL_MYSQL["port"], LOCAL_MYSQL["user"], LOCAL_MYSQL["password"],
             "SELECT INDEX_NAME, COLUMN_NAME, NON_UNIQUE "
             "FROM information_schema.STATISTICS "
-            "WHERE TABLE_SCHEMA = 'geodrsync' AND TABLE_NAME = 'sys_user' "
+            "WHERE TABLE_SCHEMA = 'DRPlatform' AND TABLE_NAME = 'sys_user' "
             "ORDER BY INDEX_NAME, SEQ_IN_INDEX",
         )
         assert isinstance(rows, list), f"查询索引失败: {rows}"

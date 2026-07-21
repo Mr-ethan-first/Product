@@ -26,13 +26,13 @@ from conftest import (
     ensure_database, drop_database, wait_for_condition,
 )
 
-GEODRSYNC_DB = {"host": "127.0.0.1", "port": 3306, "user": "root", "password": "123456", "database": "geodrsync"}
+DRPlatform_DB = {"host": "127.0.0.1", "port": 3306, "user": "root", "password": "123456", "database": "DRPlatform"}
 
 
 # ===================== 辅助函数 =====================
 
 def query_operation_log(operation_type=None, username=None, limit=20):
-    """直连 geodrsync.operation_log 查询最近的操作日志。"""
+    """直连 DRPlatform.operation_log 查询最近的操作日志。"""
     sql = "SELECT * FROM operation_log WHERE 1=1"
     args = []
     if operation_type:
@@ -43,7 +43,7 @@ def query_operation_log(operation_type=None, username=None, limit=20):
         args.append(username)
     sql += " ORDER BY id DESC LIMIT %s"
     args.append(limit)
-    return db_query(**GEODRSYNC_DB, sql=sql, args=args)
+    return db_query(**DRPlatform_DB, sql=sql, args=args)
 
 
 def wait_for_op_log(operation_type, timeout=10, interval=0.5):
@@ -73,7 +73,7 @@ def register_user(username, password):
 
 def get_user_id(username):
     """从 sys_user 表查 user_id。"""
-    row = db_query_one(**GEODRSYNC_DB,
+    row = db_query_one(**DRPlatform_DB,
                        sql="SELECT id FROM sys_user WHERE username = %s", args=[username])
     return row["id"] if row else None
 
@@ -87,7 +87,7 @@ def create_test_mapping(session, source_host="192.168.88.88", target_host="127.0
         "targetUser": "root", "targetPassword": "123456",
         "sourceDatabases": [],
         "ignoreDatabases": ["information_schema", "performance_schema", "mysql", "sys",
-                            "geodrsync", "flink_cdc_sync"],
+                            "DRPlatform", "remote_data_sync"],
     }
     r = session.post(f"{BASE_URL}/sync/mapping/add", json=body, timeout=30)
     return r
@@ -504,7 +504,7 @@ class TestIpRecordingIntegrity:
 
         time.sleep(1)
         # 直连 DB 查最近 20 条
-        logs = db_query(**GEODRSYNC_DB,
+        logs = db_query(**DRPlatform_DB,
                         sql="SELECT * FROM operation_log ORDER BY id DESC LIMIT 20")
         assert len(logs) > 0, "操作日志表为空"
 
@@ -528,7 +528,7 @@ class TestIpRecordingIntegrity:
         """操作日志记录执行耗时 duration_ms。"""
         auth.get(f"{BASE_URL}/sync/mappings", timeout=10)
         time.sleep(1)
-        logs = db_query(**GEODRSYNC_DB,
+        logs = db_query(**DRPlatform_DB,
                         sql="SELECT * FROM operation_log WHERE duration_ms IS NOT NULL ORDER BY id DESC LIMIT 5")
         assert len(logs) > 0, "没有带 duration_ms 的日志"
         for log in logs:
@@ -541,7 +541,7 @@ class TestIpRecordingIntegrity:
         assert r.status_code == 200
 
         time.sleep(1)
-        logs = db_query(**GEODRSYNC_DB,
+        logs = db_query(**DRPlatform_DB,
                         sql="SELECT * FROM operation_log WHERE operation_type = 'REGISTER' ORDER BY id DESC LIMIT 1")
         assert len(logs) == 1
         params = logs[0].get("request_params") or ""

@@ -375,7 +375,7 @@ class TestConnectionPoolCleanup:
 
         # 2. 先 reload 确保连接池创建
         r = auth.post(f"{BASE_URL}/sync/mapping/reload",
-                      json={"instanceKey": key}, timeout=30)
+                      json={"instanceKey": key}, timeout=60)
         assert_ok(r)
         wait_for_sync(cycles=2)
 

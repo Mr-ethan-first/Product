@@ -1,8 +1,8 @@
 # Java项目详细设计说明书（最终版）
 
-| 文档标识       | GEODRSYNC-DDD-V2.0      | 版本       | 2.0        |
+| 文档标识       | DRPlatform-DDD-V2.0      | 版本       | 2.0        |
 |:---------- |:----------------------- |:-------- |:---------- |
-| **项目名称**   | 地理数据库灾备同步服务 (GeoDRSync) | **密级**   | 内部公开       |
+| **项目名称**   | 地理数据库灾备同步服务 (DRPlatform) | **密级**   | 内部公开       |
 | **子系统/模块** | 数据同步核心模块                | **作者**   | [50707]    |
 | **评审人**    | [技术负责人、安全负责人、架构师]       | **发布日期** | 2026-07-18 |
 
@@ -12,7 +12,7 @@
 
 ### 1.1 文档目的
 
-本文档是GeoDRSync（地理数据库灾备同步服务）的最终详细设计说明书，旨在完整、无遗漏地描述系统的内部架构、核心类设计、关键算法、数据模型、异常处理、安全策略及非功能性实现，作为后续重新实现、代码评审、测试及运维的唯一依据。
+本文档是DRPlatform（地理数据库灾备同步服务）的最终详细设计说明书，旨在完整、无遗漏地描述系统的内部架构、核心类设计、关键算法、数据模型、异常处理、安全策略及非功能性实现，作为后续重新实现、代码评审、测试及运维的唯一依据。
 
 ### 1.2 适用范围
 
@@ -67,7 +67,7 @@
 
 #### 2.3.1 总体业务简介
 
-GeoDRSync服务是一个基于Flink的数据库实时同步平台，用于将生产中心（主库）的变更数据实时同步至灾备中心（备库），保障业务数据在灾难发生时能够快速恢复。系统通过监听生产中心数据库的Binlog日志，捕获数据变更（INSERT/UPDATE/DELETE），并将这些变更以批量的形式写入灾备中心，同时支持DDL变更的同步和主备切换后的平滑恢复。服务本身采用微服务架构，通过REST API提供状态查询和手动干预能力。
+DRPlatform服务是一个基于Flink的数据库实时同步平台，用于将生产中心（主库）的变更数据实时同步至灾备中心（备库），保障业务数据在灾难发生时能够快速恢复。系统通过监听生产中心数据库的Binlog日志，捕获数据变更（INSERT/UPDATE/DELETE），并将这些变更以批量的形式写入灾备中心，同时支持DDL变更的同步和主备切换后的平滑恢复。服务本身采用微服务架构，通过REST API提供状态查询和手动干预能力。
 
 #### 2.3.2 总体架构图
 
@@ -91,7 +91,7 @@ graph LR
             Pn[(生产库N)]
         end
         subgraph 生产同步服务
-            S1[GeoDRSync-Prod<br/>元数据采集]
+            S1[DRPlatform-Prod<br/>元数据采集]
         end
         subgraph 元数据库
             M[(元数据库)]
@@ -104,7 +104,7 @@ graph LR
 
     subgraph 灾备中心
         subgraph 灾备同步服务
-            S2[GeoDRSync-Standby]
+            S2[DRPlatform-Standby]
         end
         subgraph Flink作业集群
             F[Flink作业<br/>每对数据库一个作业]
@@ -161,7 +161,7 @@ graph LR
             Pn[(生产库N)]
         end
         subgraph 生产同步服务
-            S1[GeoDRSync-Prod]
+            S1[DRPlatform-Prod]
         end
         subgraph 元数据库
             M[(元数据库)]
@@ -174,7 +174,7 @@ graph LR
 
     subgraph 灾备中心
         subgraph 灾备同步服务
-            S2[GeoDRSync-Standby]
+            S2[DRPlatform-Standby]
         end
         subgraph Flink作业集群
             F[Flink作业<br/>一对数据库一个作业]
@@ -199,7 +199,7 @@ graph LR
 
 **部署说明**：
 
-- 生产中心和灾备中心各部署一套GeoDRSync服务，分别承担元数据采集和数据同步职责。
+- 生产中心和灾备中心各部署一套DRPlatform服务，分别承担元数据采集和数据同步职责。
 - Flink作业运行在独立的集群上，可水平扩展。
 - 元数据库采用MySQL，存储同步进度、主备切换状态和Binlog位置。
 - 配置中心使用本地文件，支持动态更新（需重启服务）。
@@ -328,7 +328,7 @@ classDiagram
 
 #### 3.3.1 构建灾备主入口（Shell脚本 + Java）
 
-**场景描述**：运维人员在统一运维平台触发灾备构建操作，平台调用远程脚本`setDRInfo`，该脚本负责将配置参数传递给灾备中心的GeoDRSync服务，触发同步作业的启动。
+**场景描述**：运维人员在统一运维平台触发灾备构建操作，平台调用远程脚本`setDRInfo`，该脚本负责将配置参数传递给灾备中心的DRPlatform服务，触发同步作业的启动。
 
 **时序图**：
 
@@ -337,7 +337,7 @@ sequenceDiagram
     participant Operator as 运维人员
     participant OpsPlatform as 统一运维平台
     participant SetDRScript as setDRInfo脚本
-    participant Manager as GeoDRSync服务
+    participant Manager as DRPlatform服务
     participant SyncManager as DatabaseSyncManager
     participant ConfigLoader as ConfigLoader
     participant Flink as Flink集群
@@ -373,9 +373,9 @@ sequenceDiagram
 1. **触发构建**：运维人员在统一运维平台选择“构建灾备”，平台后台调用`setDRInfo`脚本，并传入必要的参数（数据库映射、VIP映射、binlog位置等）。
 2. **脚本处理**：
    - 脚本解析传入的参数，将敏感信息（如数据库密码）使用配置的`encrypted_Psenstive_xxx`加密。
-   - 脚本通过SSH或HTTP方式远程调用灾备中心GeoDRSync服务的特定接口（如`/api/admin/setup`），将配置参数发送过去。
+   - 脚本通过SSH或HTTP方式远程调用灾备中心DRPlatform服务的特定接口（如`/api/admin/setup`），将配置参数发送过去。
 3. **服务端处理**：
-   - GeoDRSync服务接收到请求后，将配置参数写入配置文件（如`dbMapping.conf`、`global.conf`）。
+   - DRPlatform服务接收到请求后，将配置参数写入配置文件（如`dbMapping.conf`、`global.conf`）。
    - 调用`DatabaseSyncManager.startSyncTask()`，启动同步服务。
    - `startSyncTask()`根据配置加载映射、清理目标库、提交Flink作业。
 4. **结果返回**：同步作业启动成功后，返回结果给运维平台，运维人员可见构建状态。

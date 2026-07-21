@@ -5,8 +5,8 @@
 
 由于默认映射 127.0.0.1->192.168.88.88 已存在于 application.yml，无法重复添加
 （返回 MAPPING_ALREADY_EXISTS），本测试采用简化方案：
-1. 直查 geodrsync.sync_progress 表验证系统库（information_schema / mysql /
-   performance_schema / sys / geodrsync）未被同步、用户库已被同步。
+1. 直查 DRPlatform.sync_progress 表验证系统库（information_schema / mysql /
+   performance_schema / sys / DRPlatform）未被同步、用户库已被同步。
 2. 通过 /sync/mapping/add 接口参数校验验证 ignoreDatabases / ignoreTables /
    transformRules 字段被接口正确接受（重复添加返回 ALREADY_EXISTS 而非
    PARAM_ERROR，证明参数格式合法）。
@@ -31,7 +31,7 @@ SYSTEM_DATABASES = [
     "mysql",
     "performance_schema",
     "sys",
-    "geodrsync",
+    "DRPlatform",
 ]
 
 
@@ -51,14 +51,14 @@ class TestIgnoreDatabases:
     """整库忽略：系统库与管控库不应出现在 sync_progress 表中。"""
 
     def test_system_databases_not_synced(self):
-        """information_schema / mysql / performance_schema / sys / geodrsync 不在 sync_progress。
+        """information_schema / mysql / performance_schema / sys / DRPlatform 不在 sync_progress。
 
         同步引擎在 ScanNewDatabaseJob / DatabaseSyncManager 中通过 SYSTEM_SCHEMAS
         自动排除系统库与管控库，sync_progress 表不应出现这些库名。
         """
         rows = db_query(
             LOCAL_MYSQL["host"], LOCAL_MYSQL["port"], LOCAL_MYSQL["user"], LOCAL_MYSQL["password"],
-            "SELECT DISTINCT SOURCE_DB_NAME AS db_name FROM geodrsync.sync_progress",
+            "SELECT DISTINCT SOURCE_DB_NAME AS db_name FROM DRPlatform.sync_progress",
         )
         assert isinstance(rows, list), f"查询 sync_progress 失败: {rows}"
         synced_dbs = {r["db_name"] for r in rows}
@@ -71,7 +71,7 @@ class TestIgnoreDatabases:
         rows = db_query(
             LOCAL_MYSQL["host"], LOCAL_MYSQL["port"], LOCAL_MYSQL["user"], LOCAL_MYSQL["password"],
             "SELECT DISTINCT SOURCE_DB_NAME AS db_name, SOURCE_IP AS source_ip, STATE AS state "
-            "FROM geodrsync.sync_progress",
+            "FROM DRPlatform.sync_progress",
         )
         assert isinstance(rows, list), f"查询 sync_progress 失败: {rows}"
         assert len(rows) > 0, "sync_progress 为空，无用户库同步记录（同步引擎可能未启动）"

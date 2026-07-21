@@ -109,8 +109,8 @@ class TestSourceDatabases:
         j = assert_ok(r)
         data = j["data"]
         assert isinstance(data, list)
-        # geodrsync 是系统元数据库，已被服务端排除（SYSTEM_SCHEMAS）
-        assert "geodrsync" not in data, f"geodrsync 应被排除: {data}"
+        # DRPlatform 是系统元数据库，已被服务端排除（SYSTEM_SCHEMAS）
+        assert "DRPlatform" not in data, f"DRPlatform 应被排除: {data}"
         for db in data:
             assert db not in ("information_schema", "mysql", "performance_schema", "sys"), \
                 f"BUG: 系统库未排除: {db}"
@@ -144,17 +144,17 @@ class TestSourceDatabases:
 class TestSourceTables:
     """POST /sync/sourceTables —— 枚举指定库的表。"""
 
-    def test_valid_geodrsync(self, auth, base_url):
+    def test_valid_DRPlatform(self, auth, base_url):
         body = {
             "sourceHost": LOCAL_MYSQL["host"], "sourcePort": LOCAL_MYSQL["port"],
             "sourceUser": LOCAL_MYSQL["user"], "sourcePassword": LOCAL_MYSQL["password"],
-            "database": "geodrsync",
+            "database": "DRPlatform",
         }
         r = auth.post(f"{base_url}/sync/sourceTables", json=body, timeout=20)
         j = assert_ok(r)
         data = j["data"]
         assert isinstance(data, list)
-        assert "sys_user" in data, f"geodrsync 应含 sys_user 表: {data}"
+        assert "sys_user" in data, f"DRPlatform 应含 sys_user 表: {data}"
 
     def test_nonexistent_database(self, auth, base_url):
         body = {
@@ -189,5 +189,5 @@ class TestSourceTables:
     def test_anonymous_401(self, anon, base_url):
         assert_err(anon.post(f"{base_url}/sync/sourceTables", json={
             "sourceHost": "127.0.0.1", "sourcePort": 3306,
-            "sourceUser": "root", "sourcePassword": "123456", "database": "geodrsync",
+            "sourceUser": "root", "sourcePassword": "123456", "database": "DRPlatform",
         }, timeout=10), 401, AUTH_REQUIRED)

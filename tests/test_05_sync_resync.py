@@ -44,7 +44,7 @@ class TestResync:
 
     def test_resync_anonymous_401(self, anon, base_url):
         assert_err(anon.post(f"{base_url}/sync/resyncDatabases",
-                             json=[{"ip": "127.0.0.1", "sourceDbName": "geodrsync"}], timeout=10),
+                             json=[{"ip": "127.0.0.1", "sourceDbName": "DRPlatform"}], timeout=10),
                    401, AUTH_REQUIRED)
 
     @pytest.mark.destructive

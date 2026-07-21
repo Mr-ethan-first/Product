@@ -8,7 +8,7 @@
 - DBHASwitchStatusJob (fixedDelay=15s): 扫描 dbha_switch_status 表变化
 
 测试策略：
-- 直连 geodrsync 元数据库验证定时任务的副作用（表记录存在、字段非空、update_time 新鲜）。
+- 直连 DRPlatform 元数据库验证定时任务的副作用（表记录存在、字段非空、update_time 新鲜）。
 - 用 wait_for_condition 轮询等待定时任务跑过若干轮，避免启动时序导致的误报。
 - 时间判定全部在 MySQL 侧用 NOW() / TIMESTAMPDIFF 计算，规避客户端与服务端时区差异。
 """
@@ -21,11 +21,11 @@ from conftest import (
     REMOTE_MYSQL,
 )
 
-META_DB = "geodrsync"
+META_DB = "DRPlatform"
 
 
 def _meta(sql, args=None):
-    """直查本地 geodrsync 元数据库的快捷封装。"""
+    """直查本地 DRPlatform 元数据库的快捷封装。"""
     return db_query(
         LOCAL_MYSQL["host"], LOCAL_MYSQL["port"],
         LOCAL_MYSQL["user"], LOCAL_MYSQL["password"],
@@ -34,7 +34,7 @@ def _meta(sql, args=None):
 
 
 def _meta_one(sql, args=None):
-    """直查本地 geodrsync 元数据库（单行）。"""
+    """直查本地 DRPlatform 元数据库（单行）。"""
     return db_query_one(
         LOCAL_MYSQL["host"], LOCAL_MYSQL["port"],
         LOCAL_MYSQL["user"], LOCAL_MYSQL["password"],

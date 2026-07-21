@@ -1,0 +1,134 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: remote-data-sync
+  # 禁止浏览器缓存前端静态资源（index.html / 内嵌 JS），避免旧版本（含残留 import 语句）
+  # 被长期缓存导致 Babel 运行时报 “Cannot use import statement outside a module”。
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          no-store: true
+          no-cache: true
+          max-age: 0
+  datasource:
+    # 元数据库（存储 sync_progress / dbha_switch_status 等管控表）
+    url: jdbc:mysql://127.0.0.1:3306/DRPlatform?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      pool-name: DRPlatform-Meta-Pool
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    default-property-inclusion: non_null
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/*.xml
+  type-aliases-package: com.example.remotedatasync.po
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      table-prefix: ""
+
+# ===================== DRPlatform 业务配置 =====================
+drplatform:
+  # 是否灾备中心模式（true 时启动同步引擎）
+  standby-mode: true
+  # 是否启用真正的 Flink 集群作业提交（本地 Windows 无集群，默认 false，走内嵌同步引擎）
+  flink:
+    enabled: false
+    parallelism: 2
+    checkpoint-interval-ms: 30000
+    savepoint-path: /data/DRPlatform/savepoint
+  # 同步引擎参数（内嵌实现，保证本地可运行 + 数据一致性可测）
+  engine:
+    poll-interval-ms: 2000
+    batch-size: 1000
+    max-queue-size: 20000
+    reconcile-interval-ms: 10000
+    deviation-timeout-sec: 300
+  # 数据库连接池上限（全局信号量）
+  connection:
+    max-pool-size: 32
+    max-global-connections: 200
+  # 数据库映射：生产中心主机 -> 灾备中心主机（主机对，1:1 异地备份）
+  # 该源主机下所有用户库与表将被自动同步（系统库与 ignoreDatabases 除外），无需逐项勾选；
+  # 新增的库 / 表会在下一轮扫描中实时纳入。可配置多组主机对以实现多服务器异地备份。
+  mappings:
+    - source-host: 127.0.0.1
+      source-port: 3306
+      source-user: root
+      source-password: 123456
+      target-host: 192.168.88.88
+      target-port: 3306
+      target-user: root
+      target-password: 123456
+      # 整库忽略（支持多个 + 正则，如 re:^tmp_.*）；为空则同步全部用户库
+      # day02 含 258 万行 areas 表，rfm_db 含 102 万行，day01 含 159 万行 test_table；
+      # 全量同步耗时长且阻塞后续小库，因此忽略
+      ignore-databases: ["day02", "rfm_db", "day01"]
+      # 表忽略：DML 与 DDL 均跳过；支持多个 + 正则
+      ignore-tables: []
+      # 仅忽略 DDL 的表（结构变更不同步，但数据仍同步）；支持多个 + 正则
+      ignore-ddl-tables: []
+      # 字段内容转换规则（可选）
+      transform-rules: []
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    root: INFO
+    com.example.remotedatasync: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [traceId=%X{traceId:-NA}] %logger{36} - %msg%n"
+
+---
+# ===================== Linux (CentOS7) 部署配置 =====================
+spring:
+  config:
+    activate:
+      on-profile: linux
+  datasource:
+    url: jdbc:mysql://192.168.88.88:3306/DRPlatform?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: 123456
+
+drplatform:
+  standby-mode: true
+  flink:
+    enabled: false
+    savepoint-path: /data/DRPlatform/savepoint
+  # 生产环境通常是不同主机之间异地备份，此处示例为同机演示（源/目标同主机）；
+  # 实际部署请将 target-host 改为独立的灾备主机 IP。
+  mappings:
+    - source-host: 192.168.88.88
+      source-port: 3306
+      source-user: root
+      source-password: 123456
+      target-host: 192.168.88.88
+      target-port: 3306
+      target-user: root
+      target-password: 123456
+      ignore-databases: []
+      ignore-tables: []
+      ignore-ddl-tables: []
+      transform-rules: []

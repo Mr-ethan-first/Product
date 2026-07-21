@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """同步引擎端到端自动化测试。
 
-验证 GeoDRSync 内嵌同步引擎的核心能力：
+验证 DRPlatform 内嵌同步引擎的核心能力：
 - 数据同步（INSERT / UPDATE / DELETE 全链路）
 - DDL 变更检测（ALTER TABLE 自动重建目标表）
 - 删除对账（reconcileDeletes：源端删除 → 目标端同步删除）

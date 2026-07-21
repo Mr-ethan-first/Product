@@ -43,7 +43,7 @@ PASS app.js 使用 createRoot 挂载
 PASS React/ReactDOM UMD 加载成功
 PASS app.js 执行无抛错（无 import 运行时错误）
 PASS 根节点已渲染内容  -> len=781
-PASS 登录页正确渲染（含"GeoDRSync 管理后台"）
+PASS 登录页正确渲染（含"DRPlatform 管理后台"）
 PASS 登录页含"登 录"按钮
 PASS 无 "Cannot use import statement" 运行时错误
 ==== 前端测试汇总: 13/13 通过 ====
@@ -58,7 +58,7 @@ bash frontend/build-and-test.sh
 
 ## 四、后端自动化测试（JUnit 集成测试，8 用例）
 
-位置：`src/test/java/.../GeoDRSyncConsistencyTest`（连真实 MySQL：源 127.0.0.1:3306 / 目标 192.168.88.88:3306）。随 `mvn clean package` 执行，覆盖跨主机十库同步一致性、忽略规则、层级忽略、字段转换等。
+位置：`src/test/java/.../DRPlatformConsistencyTest`（连真实 MySQL：源 127.0.0.1:3306 / 目标 192.168.88.88:3306）。随 `mvn clean package` 执行，覆盖跨主机十库同步一致性、忽略规则、层级忽略、字段转换等。
 
 > 运行前须停掉运行态 app，避免打爆 MySQL `root` 的 `max_user_connections`。
 
@@ -79,7 +79,7 @@ bash frontend/build-and-test.sh
 前端改代码只改 `frontend/app.jsx`，然后：
 ```bash
 bash frontend/build-and-test.sh                 # 1) 预编译 app.js + 跑前端测试
-bash /d/WorkSpace/flink-cdc-sync/mvn3.sh -o clean package   # 2) 重新打包（含后端测试）
+bash /d/WorkSpace/remote-data-sync/mvn3.sh -o clean package   # 2) 重新打包（含后端测试）
 # 3) 停旧进程 → --server.port=8080 重启
 ```
 **不要手改 `frontend/app.js`**（它是自动生成物，会被覆盖）。

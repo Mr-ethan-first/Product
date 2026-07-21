@@ -2,7 +2,7 @@
 """DatabaseMetadataService 核心功能集成测试（通过 API 间接验证）。
 
 覆盖能力：
-- getAllUserDatabases:  排除系统库（information_schema / mysql / performance_schema / sys / geodrsync）
+- getAllUserDatabases:  排除系统库（information_schema / mysql / performance_schema / sys / DRPlatform）
 - listTables:           只返回 BASE TABLE，不含视图
 - ensureTargetDatabase: 源库出现新库时，同步引擎在灾备端自动建库
 - sanitizeDdlForPortability: 含 utf8mb4_0900_ai_ci 的 DDL 降级为 utf8mb4_general_ci
@@ -32,7 +32,7 @@ SYSTEM_DATABASES = {
     "mysql",
     "performance_schema",
     "sys",
-    "geodrsync",
+    "DRPlatform",
 }
 
 

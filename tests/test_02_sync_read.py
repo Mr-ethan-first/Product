@@ -148,7 +148,7 @@ class TestDatabasesByIp:
         assert r.status_code == 200, r.text
         data = r.json()
         assert isinstance(data, list)
-        # geodrsync 是系统元数据库，不在同步进度中
+        # DRPlatform 是系统元数据库，不在同步进度中
         # 系统库应被排除
         for db in data:
             assert db not in ("information_schema", "mysql", "performance_schema", "sys"), \

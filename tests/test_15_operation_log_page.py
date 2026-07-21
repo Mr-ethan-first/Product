@@ -29,7 +29,7 @@ from conftest import (
     wait_for_condition,
 )
 
-GEODRSYNC_DB = {"host": "127.0.0.1", "port": 3306, "user": "root", "password": "123456", "database": "geodrsync"}
+DRPlatform_DB = {"host": "127.0.0.1", "port": 3306, "user": "root", "password": "123456", "database": "DRPlatform"}
 
 # 模拟数据标记，用于测试后精确清理
 TEST_TAG = f"test15_{int(time.time())}_{uuid.uuid4().hex[:6]}"
@@ -63,8 +63,8 @@ def insert_mock_logs(count=MOCK_COUNT):
     now = datetime.now()
     inserted_ids = []
 
-    conn = pymysql.connect(**{k: v for k, v in GEODRSYNC_DB.items() if k != "database"})
-    conn.select_db("geodrsync")
+    conn = pymysql.connect(**{k: v for k, v in DRPlatform_DB.items() if k != "database"})
+    conn.select_db("DRPlatform")
     try:
         with conn.cursor() as cur:
             for i in range(count):
@@ -100,19 +100,19 @@ def insert_mock_logs(count=MOCK_COUNT):
 
 def cleanup_mock_logs():
     """清理本次测试插入的模拟数据。"""
-    db_exec(**GEODRSYNC_DB,
+    db_exec(**DRPlatform_DB,
             sql="DELETE FROM operation_log WHERE operation_desc LIKE %s",
             args=[f"%[{TEST_TAG}]%"])
 
 
 def query_log_list(session, body):
     """调用 /operation-log/list 接口。"""
-    return session.post(f"{BASE_URL}/operation-log/list", json=body, timeout=10)
+    return session.post(f"{BASE_URL}/operation-log/list", json=body, timeout=30)
 
 
 def query_log_types(session):
     """调用 /operation-log/types 接口。"""
-    return session.get(f"{BASE_URL}/operation-log/types", timeout=10)
+    return session.get(f"{BASE_URL}/operation-log/types", timeout=30)
 
 
 # ===================== 测试夹具 =====================

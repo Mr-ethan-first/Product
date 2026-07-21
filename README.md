@@ -1,6 +1,6 @@
-# GeoDRSync — MySQL 跨主机数据库灾备同步中间件
+# DRPlatform — MySQL 跨主机数据库灾备同步中间件
 
-GeoDRSync 将生产中心 MySQL 数据库的数据实时同步到异地灾备中心。采用"主机对模型 + 自动库发现"设计，运维人员只需配置一组源主机与目标主机，引擎自动发现源端全部用户库表并启动同步，新增库表无需人工介入。
+DRPlatform 将生产中心 MySQL 数据库的数据实时同步到异地灾备中心。采用"主机对模型 + 自动库发现"设计，运维人员只需配置一组源主机与目标主机，引擎自动发现源端全部用户库表并启动同步，新增库表无需人工介入。
 
 ## 核心能力
 
@@ -39,7 +39,7 @@ GeoDRSync 将生产中心 MySQL 数据库的数据实时同步到异地灾备中
 
 ### 一键安装
 
-将 `flink-cdc-sync.jar`、`install.sh`、`init.sql` 放在同一目录下，执行：
+将 `remote-data-sync.jar`、`install.sh`、`init.sql` 放在同一目录下，执行：
 
 ```bash
 sudo bash install.sh
@@ -51,9 +51,9 @@ sudo bash install.sh
 2. **交互式配置** — 输入 MySQL 主机、端口、用户名、密码（无默认值，密码需二次确认）、后端端口、同步源/目标主机
 3. **安装依赖** — 自动安装 Java 17+、Nginx、MySQL 客户端（如未安装）
 4. **测试 MySQL 连接** — 验证输入的凭据可连通
-5. **创建数据库** — 创建 `geodrsync` 元数据库并初始化表结构
-6. **部署应用** — 复制 jar 包、前端资源到 `/data/geodrsync/`，生成 `application-linux.yml`
-7. **配置 systemd** — 创建 `geodrsync.service`，开机自启
+5. **创建数据库** — 创建 `DRPlatform` 元数据库并初始化表结构
+6. **部署应用** — 复制 jar 包、前端资源到 `/data/DRPlatform/`，生成 `application-linux.yml`
+7. **配置 systemd** — 创建 `DRPlatform.service`，开机自启
 8. **配置 Nginx** — 创建反向代理 vhost，启动服务并健康检查
 
 安装完成后输出访问地址与常用命令。
@@ -69,7 +69,7 @@ MySQL 用户名: root
 MySQL 密码: ********
 确认密码: ********
 
-GeoDRSync 后端服务端口配置：
+DRPlatform 后端服务端口配置：
 后端服务端口 (默认 8090): 8090
 
 数据库同步映射配置（源主机数据 → 目标主机）：
@@ -82,9 +82,9 @@ GeoDRSync 后端服务端口配置：
 安装后的目录布局：
 
 ```
-/data/geodrsync/
+/data/DRPlatform/
 ├── bin/
-│   └── flink-cdc-sync.jar      # 应用主包
+│   └── remote-data-sync.jar      # 应用主包
 ├── conf/
 │   ├── application-linux.yml   # 运行配置（由 install.sh 生成）
 │   └── db/
@@ -101,12 +101,12 @@ GeoDRSync 后端服务端口配置：
 
 ## 配置说明
 
-主配置文件：`/data/geodrsync/conf/application-linux.yml`
+主配置文件：`/data/DRPlatform/conf/application-linux.yml`
 
 ### 核心配置项
 
 ```yaml
-geodrsync:
+DRPlatform:
   standby-mode: true              # true=启动同步引擎，false=仅管理后台
   engine:
     poll-interval-ms: 2000        # 同步轮询间隔（毫秒）
@@ -174,22 +174,22 @@ curl -X POST http://localhost:8090/sync/mapping/reload \
 
 ```bash
 # 启动
-systemctl start geodrsync
+systemctl start DRPlatform
 
 # 停止
-systemctl stop geodrsync
+systemctl stop DRPlatform
 
 # 重启
-systemctl restart geodrsync
+systemctl restart DRPlatform
 
 # 查看状态
-systemctl status geodrsync
+systemctl status DRPlatform
 
 # 查看实时日志
-journalctl -u geodrsync -f
+journalctl -u DRPlatform -f
 
 # 查看应用日志
-tail -f /data/geodrsync/logs/app.log
+tail -f /data/DRPlatform/logs/app.log
 ```
 
 ## API 接口
@@ -260,7 +260,7 @@ curl -b cookies.txt http://localhost:8090/sync/progress
 
 ## 数据库表结构
 
-元数据库 `geodrsync` 包含以下管控表：
+元数据库 `DRPlatform` 包含以下管控表：
 
 | 表名 | 用途 |
 |------|------|
@@ -296,7 +296,7 @@ curl -b cookies.txt http://localhost:8090/sync/progress
 
 ```bash
 # 确保 MySQL 与应用服务已启动
-cd D:\WorkSpace\flink-cdc-sync
+cd D:\WorkSpace\remote-data-sync
 python -m pytest tests/ -v
 
 # 运行单个测试模块
@@ -310,9 +310,9 @@ python -m pytest tests/ -v -m "not destructive"
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `GEODRSYNC_BASE_URL` | `http://127.0.0.1:8080` | 被测服务地址 |
-| `GEODRSYNC_ADMIN_USER` | `admin` | 管理员账号 |
-| `GEODRSYNC_ADMIN_PASS` | `admin123` | 管理员密码 |
+| `DRPlatform_BASE_URL` | `http://127.0.0.1:8080` | 被测服务地址 |
+| `DRPlatform_ADMIN_USER` | `admin` | 管理员账号 |
+| `DRPlatform_ADMIN_PASS` | `admin123` | 管理员密码 |
 
 ## 本地开发
 
@@ -330,7 +330,7 @@ python -m pytest tests/ -v -m "not destructive"
 mvn -DskipTests package -q
 
 # 启动后端（使用默认配置）
-java -jar target/flink-cdc-sync.jar
+java -jar target/remote-data-sync.jar
 
 # 前端构建（将 JSX 预编译为 app.js）
 cd frontend
@@ -353,10 +353,10 @@ node build_app.js
 
 ```bash
 # 查看 systemd 日志
-journalctl -u geodrsync -n 100
+journalctl -u DRPlatform -n 100
 
 # 查看应用错误日志
-tail -100 /data/geodrsync/logs/app.err
+tail -100 /data/DRPlatform/logs/app.err
 
 # 常见原因：
 # 1. MySQL 连接失败 — 检查 application-linux.yml 中的凭据
@@ -381,7 +381,7 @@ curl -b cookies.txt http://localhost:8090/sync/progress
 
 ### Nginx 301 重定向
 
-如果通过 80 端口访问返回 301，通常是 Nginx 配置中 `server_name` 冲突。编辑 `/www/server/nginx/conf/vhost/geodrsync.conf`（宝塔面板）或 `/etc/nginx/conf.d/geodrsync.conf`，将 `server_name _;` 改为实际 IP 或域名：
+如果通过 80 端口访问返回 301，通常是 Nginx 配置中 `server_name` 冲突。编辑 `/www/server/nginx/conf/vhost/DRPlatform.conf`（宝塔面板）或 `/etc/nginx/conf.d/DRPlatform.conf`，将 `server_name _;` 改为实际 IP 或域名：
 
 ```nginx
 server {
@@ -398,8 +398,8 @@ server {
 直接通过 MySQL 重置：
 
 ```sql
--- 连接到 geodrsync 元数据库
-USE geodrsync;
+-- 连接到 DRPlatform 元数据库
+USE DRPlatform;
 
 -- 查看现有用户
 SELECT ID, USERNAME FROM sys_user;
@@ -415,25 +415,25 @@ DELETE FROM sys_user WHERE USERNAME = 'admin';
 ## 卸载
 
 ```bash
-systemctl stop geodrsync
-systemctl disable geodrsync
-rm -f /etc/systemd/system/geodrsync.service
-rm -f /www/server/nginx/conf/vhost/geodrsync.conf   # 宝塔面板
-# 或 rm -f /etc/nginx/conf.d/geodrsync.conf           # 标准安装
-rm -rf /data/geodrsync
+systemctl stop DRPlatform
+systemctl disable DRPlatform
+rm -f /etc/systemd/system/DRPlatform.service
+rm -f /www/server/nginx/conf/vhost/DRPlatform.conf   # 宝塔面板
+# 或 rm -f /etc/nginx/conf.d/DRPlatform.conf           # 标准安装
+rm -rf /data/DRPlatform
 systemctl daemon-reload
 nginx -s reload
 ```
 
-元数据库 `geodrsync` 需手动删除：
+元数据库 `DRPlatform` 需手动删除：
 
 ```sql
-DROP DATABASE geodrsync;
+DROP DATABASE DRPlatform;
 ```
 
 ## 相关文档
 
 | 文档 | 说明 |
 |------|------|
-| [GeoDRSync-PRD.md](GeoDRSync-PRD.md) | 产品需求文档 — 功能定义、用户场景、成功指标 |
-| [GeoDRSync-详细设计说明书.md](GeoDRSync-详细设计说明书.md) | 详细设计 — 模块设计、数据库设计、API 设计、测试策略 |
+| [DRPlatform-PRD.md](DRPlatform-PRD.md) | 产品需求文档 — 功能定义、用户场景、成功指标 |
+| [DRPlatform-详细设计说明书.md](DRPlatform-详细设计说明书.md) | 详细设计 — 模块设计、数据库设计、API 设计、测试策略 |

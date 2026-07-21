@@ -172,7 +172,7 @@ class TestConnectionPoolConcurrent:
         assert "mysql" not in first_set, "BUG: mysql 未排除"
         assert "performance_schema" not in first_set, "BUG: performance_schema 未排除"
         assert "sys" not in first_set, "BUG: sys 未排除"
-        assert "geodrsync" not in first_set, "BUG: geodrsync 未排除"
+        assert "DRPlatform" not in first_set, "BUG: DRPlatform 未排除"
 
         # 连接泄漏检测：第 6 次请求仍应正常
         r = requests.post(url, json=body, cookies=cookies, timeout=20)
