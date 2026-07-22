@@ -1,0 +1,22 @@
+[Unit]
+Description=DRPlatform Disaster Recovery Sync Service (watchdog supervised)
+After=network.target mysqld.service mariadb.service
+Wants=mysqld.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/data/DRPlatform
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+# 由守护进程负责拉起并看护应用；守护进程收到 SIGTERM 会干净退出(退出码 0)
+ExecStart=/data/DRPlatform/bin/watchdog.sh
+# 仅在守护进程异常退出(非 0)时由 systemd 重新拉起；
+# 手动 stop 时守护进程以 0 退出 -> 不会触发 Restart(满足"手动停止不自动拉起")
+Restart=on-failure
+RestartSec=5
+SuccessExitStatus=0 143
+StandardOutput=append:/data/DRPlatform/logs/watchdog.out
+StandardError=append:/data/DRPlatform/logs/watchdog.out
+
+[Install]
+WantedBy=multi-user.target

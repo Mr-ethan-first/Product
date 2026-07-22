@@ -1,11 +1,10 @@
+/* AUTO-GENERATED from app.jsx by build_app.js. DO NOT EDIT. */
 const {
   useState,
   useEffect,
   useRef,
   useCallback
 } = React;
-
-/* ============ 轻量提示 Toast ============ */
 const TOAST_EVENT = 'rx-toast';
 let toastSeq = 0;
 function toast(type, text) {
@@ -35,15 +34,13 @@ function ToastHost() {
     window.addEventListener(TOAST_EVENT, h);
     return () => window.removeEventListener(TOAST_EVENT, h);
   }, []);
-  return /*#__PURE__*/React.createElement("div", {
+  return React.createElement("div", {
     className: "rx-toasts"
-  }, items.map(i => /*#__PURE__*/React.createElement("div", {
+  }, items.map(i => React.createElement("div", {
     key: i.id,
     className: 'rx-toast rx-' + i.type
   }, i.text)));
 }
-
-/* ============ 多选/可新建 Select ============ */
 function Select({
   value,
   options = [],
@@ -59,6 +56,14 @@ function Select({
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const boxRef = useRef(null);
+  const norm = o => o && typeof o === 'object' ? {
+    value: o.value,
+    label: o.label != null ? String(o.label) : String(o.value)
+  } : {
+    value: o,
+    label: String(o)
+  };
+  const normList = (options || []).map(norm);
   const vals = multiple ? value || [] : value ? [value] : [];
   useEffect(() => {
     const h = e => {
@@ -67,8 +72,8 @@ function Select({
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, []);
-  const filtered = (options || []).filter(o => String(o || '').toLowerCase().includes(String(text || '').toLowerCase()));
-  const showCreate = allowCreate && !!text && !options.includes(text) && !vals.includes(text);
+  const filtered = normList.filter(o => String(o.label || '').toLowerCase().includes(String(text || '').toLowerCase()) || String(o.value || '').toLowerCase().includes(String(text || '').toLowerCase()));
+  const showCreate = allowCreate && !!text && !normList.some(o => o.value === text || o.label === text) && !vals.includes(text);
   const toggle = v => {
     if (multiple) {
       const next = vals.includes(v) ? vals.filter(x => x !== v) : [...vals, v];
@@ -85,27 +90,36 @@ function Select({
     setText('');
     if (!multiple) setOpen(false);
   };
-  return /*#__PURE__*/React.createElement("div", {
+  return React.createElement("div", {
     ref: boxRef,
     className: 'rx-select' + (disabled ? ' rx-disabled' : ''),
     style: style
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     className: "rx-select-box",
     onClick: () => {
       if (!disabled) setOpen(o => !o);
     }
-  }, vals.length === 0 && !open && /*#__PURE__*/React.createElement("span", {
+  }, vals.length === 0 && !open && React.createElement("span", {
     className: "rx-ph"
-  }, placeholder), vals.map(v => /*#__PURE__*/React.createElement("span", {
-    key: v,
-    className: "rx-tag"
-  }, v, multiple && /*#__PURE__*/React.createElement("span", {
-    className: "rx-x",
-    onClick: e => {
-      e.stopPropagation();
-      toggle(v);
-    }
-  }, "\xD7"))), open && filterable && /*#__PURE__*/React.createElement("input", {
+  }, placeholder), vals.map(v => {
+    const it = normList.find(x => x.value === v);
+    return React.createElement("span", {
+      key: v,
+      className: "rx-tag"
+    }, it ? it.label : v, multiple && React.createElement("span", {
+      className: "rx-x",
+      onClick: e => {
+        e.stopPropagation();
+        toggle(v);
+      }
+    }, "\xD7"), !multiple && React.createElement("span", {
+      className: "rx-x",
+      onClick: e => {
+        e.stopPropagation();
+        onChange('');
+      }
+    }, "\xD7"));
+  }), open && filterable && React.createElement("input", {
     className: "rx-input",
     autoFocus: true,
     value: text,
@@ -114,27 +128,212 @@ function Select({
     onChange: e => setText(e.target.value),
     onKeyDown: e => {
       if (e.key === 'Enter') {
-        if (showCreate) create();else if (filtered[0]) toggle(filtered[0]);
+        if (showCreate) create();else if (filtered[0]) toggle(filtered[0].value);
       }
       if (e.key === 'Backspace' && !text && multiple && vals.length) onChange(vals.slice(0, -1));
     }
-  })), open && /*#__PURE__*/React.createElement("div", {
+  })), open && React.createElement("div", {
     className: "rx-dropdown"
-  }, loading && /*#__PURE__*/React.createElement("div", {
+  }, loading && React.createElement("div", {
     className: "rx-loading"
-  }, "\u52A0\u8F7D\u4E2D..."), filtered.map(o => /*#__PURE__*/React.createElement("div", {
-    key: o,
-    className: 'rx-opt' + (vals.includes(o) ? ' rx-sel' : ''),
-    onClick: () => toggle(o)
-  }, o)), showCreate && /*#__PURE__*/React.createElement("div", {
+  }, "\u52A0\u8F7D\u4E2D..."), filtered.map(o => React.createElement("div", {
+    key: o.value,
+    className: 'rx-opt' + (vals.includes(o.value) ? ' rx-sel' : ''),
+    onClick: () => toggle(o.value)
+  }, o.label)), showCreate && React.createElement("div", {
     className: "rx-opt rx-create",
     onClick: create
-  }, "\u521B\u5EFA: \u201C", text, "\u201D"), !loading && filtered.length === 0 && !showCreate && /*#__PURE__*/React.createElement("div", {
+  }, "\u521B\u5EFA: \u201C", text, "\u201D"), !loading && filtered.length === 0 && !showCreate && React.createElement("div", {
     className: "rx-empty"
   }, "\u65E0\u5339\u914D")));
 }
-
-/* ============ 抽屉 ============ */
+function DateTimePicker({
+  value,
+  onChange,
+  placeholder = '选择日期时间',
+  disabled = false,
+  style
+}) {
+  const pad = n => String(n).padStart(2, '0');
+  const ref = useRef(null);
+  const [open, setOpen] = useState(false);
+  const parse = s => {
+    if (!s) return null;
+    const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{1,2})/);
+    if (!m) return null;
+    return {
+      y: +m[1],
+      mo: +m[2] - 1,
+      d: +m[3],
+      h: +m[4],
+      mi: +m[5]
+    };
+  };
+  const now = new Date();
+  const init = parse(value) || {
+    y: now.getFullYear(),
+    mo: now.getMonth(),
+    d: now.getDate(),
+    h: now.getHours(),
+    mi: now.getMinutes()
+  };
+  const [sel, setSel] = useState(init);
+  const [view, setView] = useState({
+    y: init.y,
+    mo: init.mo
+  });
+  useEffect(() => {
+    const p = parse(value);
+    if (p) {
+      setSel(p);
+      setView({
+        y: p.y,
+        mo: p.mo
+      });
+    }
+  }, [value]);
+  useEffect(() => {
+    const h = e => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+  const firstDay = new Date(view.y, view.mo, 1).getDay();
+  const days = new Date(view.y, view.mo + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= days; d++) cells.push(d);
+  const isSame = d => sel.y === view.y && sel.mo === view.mo && sel.d === d;
+  const isToday = d => {
+    const n = new Date();
+    return n.getFullYear() === view.y && n.getMonth() === view.mo && n.getDate() === d;
+  };
+  const move = delta => {
+    let mo = view.mo + delta,
+      y = view.y;
+    if (mo < 0) {
+      mo = 11;
+      y--;
+    }
+    if (mo > 11) {
+      mo = 0;
+      y++;
+    }
+    setView({
+      y,
+      mo
+    });
+  };
+  const pickDay = d => setSel(s => ({
+    ...s,
+    d
+  }));
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, isNaN(v) ? lo : v));
+  const confirm = () => {
+    onChange(`${sel.y}-${pad(sel.mo + 1)}-${pad(sel.d)} ${pad(sel.h)}:${pad(sel.mi)}:00`);
+    setOpen(false);
+  };
+  return React.createElement("div", {
+    ref: ref,
+    className: 'rx-dtpicker' + (disabled ? ' rx-disabled' : ''),
+    style: style
+  }, React.createElement("div", {
+    className: "rx-dtpicker-box",
+    onClick: () => {
+      if (!disabled) setOpen(o => !o);
+    }
+  }, value ? React.createElement("span", {
+    className: "rx-dtp-value"
+  }, String(value).replace(':00', '')) : React.createElement("span", {
+    className: "rx-ph"
+  }, placeholder), React.createElement("span", {
+    className: "rx-cal-ico",
+    "aria-hidden": "true"
+  }, React.createElement("svg", {
+    width: "16",
+    height: "16",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, React.createElement("rect", {
+    x: "3",
+    y: "4",
+    width: "18",
+    height: "17",
+    rx: "2"
+  }), React.createElement("path", {
+    d: "M3 9h18M8 2v4M16 2v4"
+  })))), open && React.createElement("div", {
+    className: "rx-cal"
+  }, React.createElement("div", {
+    className: "rx-cal-head"
+  }, React.createElement("button", {
+    type: "button",
+    className: "rx-cal-nav",
+    onClick: () => move(-1)
+  }, "\u2039"), React.createElement("span", {
+    className: "rx-cal-title"
+  }, view.y, " \u5E74 ", view.mo + 1, " \u6708"), React.createElement("button", {
+    type: "button",
+    className: "rx-cal-nav",
+    onClick: () => move(1)
+  }, "\u203A")), React.createElement("div", {
+    className: "rx-cal-week"
+  }, weekDays.map(w => React.createElement("span", {
+    key: w
+  }, w))), React.createElement("div", {
+    className: "rx-cal-grid"
+  }, cells.map((d, i) => d === null ? React.createElement("span", {
+    key: i,
+    className: "rx-cal-cell empty"
+  }) : React.createElement("button", {
+    type: "button",
+    key: i,
+    className: 'rx-cal-cell' + (isSame(d) ? ' sel' : '') + (isToday(d) ? ' today' : ''),
+    onClick: () => pickDay(d)
+  }, d))), React.createElement("div", {
+    className: "rx-cal-time"
+  }, React.createElement("span", {
+    className: "rx-cal-time-lbl"
+  }, "\u65F6\u95F4"), React.createElement("input", {
+    type: "number",
+    className: "rx-cal-num",
+    min: "0",
+    max: "23",
+    value: sel.h,
+    onChange: e => setSel(s => ({
+      ...s,
+      h: clamp(+e.target.value, 0, 23)
+    }))
+  }), React.createElement("span", {
+    className: "rx-cal-colon"
+  }, ":"), React.createElement("input", {
+    type: "number",
+    className: "rx-cal-num",
+    min: "0",
+    max: "59",
+    value: sel.mi,
+    onChange: e => setSel(s => ({
+      ...s,
+      mi: clamp(+e.target.value, 0, 59)
+    }))
+  })), React.createElement("div", {
+    className: "rx-cal-foot"
+  }, React.createElement("button", {
+    type: "button",
+    className: "rx-btn",
+    onClick: () => setOpen(false)
+  }, "\u53D6\u6D88"), React.createElement("button", {
+    type: "button",
+    className: "rx-btn rx-btn-primary",
+    onClick: confirm
+  }, "\u786E\u5B9A"))));
+}
 function Drawer({
   open,
   title,
@@ -142,30 +341,28 @@ function Drawer({
   children
 }) {
   if (!open) return null;
-  return /*#__PURE__*/React.createElement("div", {
+  return React.createElement("div", {
     className: "rx-mask",
     onClick: onClose
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     className: "rx-drawer",
     onClick: e => e.stopPropagation()
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     style: {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: 14
     }
-  }, /*#__PURE__*/React.createElement("h3", {
+  }, React.createElement("h3", {
     style: {
       margin: 0
     }
-  }, title), /*#__PURE__*/React.createElement("span", {
+  }, title), React.createElement("span", {
     className: "rx-link",
     onClick: onClose
   }, "\u5173\u95ED")), children));
 }
-
-/* ============ 分页 ============ */
 function Pager({
   total,
   page,
@@ -177,34 +374,32 @@ function Pager({
   const start = Math.max(1, Math.min(page - 2, pages - 4));
   const end = Math.min(pages, start + 4);
   for (let i = start; i <= end; i++) nums.push(i);
-  return /*#__PURE__*/React.createElement("span", {
+  return React.createElement("span", {
     className: "rx-pager"
-  }, /*#__PURE__*/React.createElement("button", {
+  }, React.createElement("button", {
     disabled: page <= 1,
     onClick: () => onChange(page - 1)
-  }, "\u4E0A\u4E00\u9875"), start > 1 && /*#__PURE__*/React.createElement("button", {
+  }, "\u4E0A\u4E00\u9875"), start > 1 && React.createElement("button", {
     onClick: () => onChange(1)
-  }, "1"), start > 2 && /*#__PURE__*/React.createElement("span", {
+  }, "1"), start > 2 && React.createElement("span", {
     style: {
       padding: '0 4px'
     }
-  }, "\u2026"), nums.map(n => /*#__PURE__*/React.createElement("button", {
+  }, "\u2026"), nums.map(n => React.createElement("button", {
     key: n,
     className: n === page ? 'active' : '',
     onClick: () => onChange(n)
-  }, n)), end < pages - 1 && /*#__PURE__*/React.createElement("span", {
+  }, n)), end < pages - 1 && React.createElement("span", {
     style: {
       padding: '0 4px'
     }
-  }, "\u2026"), end < pages && /*#__PURE__*/React.createElement("button", {
+  }, "\u2026"), end < pages && React.createElement("button", {
     onClick: () => onChange(pages)
-  }, pages), /*#__PURE__*/React.createElement("button", {
+  }, pages), React.createElement("button", {
     disabled: page >= pages,
     onClick: () => onChange(page + 1)
   }, "\u4E0B\u4E00\u9875"));
 }
-
-/* ============ 工具函数 ============ */
 function isConcreteDb(db) {
   return !!db && !String(db).startsWith('re:') && db.indexOf('*') < 0 && db.indexOf('?') < 0;
 }
@@ -282,8 +477,6 @@ function buildPairConfig(pair) {
     transformRules: validRules(pair)
   };
 }
-
-/* ============ 单个主机对配置卡 ============ */
 function PairCard(props) {
   const {
     pair,
@@ -306,14 +499,14 @@ function PairCard(props) {
     const listName = kind === 'dml' ? 'ignoreTablesByDb' : 'ignoreDdlTablesByDb';
     const list = pair[listName] || [];
     const title = kind === 'dml' ? '按库忽略表（DML + DDL 均不同步）' : '按库忽略表（仅忽略 DDL，数据仍同步）';
-    return /*#__PURE__*/React.createElement("div", {
+    return React.createElement("div", {
       className: "sub-block"
-    }, /*#__PURE__*/React.createElement("div", {
+    }, React.createElement("div", {
       className: "sub-title"
-    }, title), list.map((entry, i) => /*#__PURE__*/React.createElement("div", {
+    }, title), list.map((entry, i) => React.createElement("div", {
       className: "db-ignore-row",
       key: kind + i
-    }, /*#__PURE__*/React.createElement(Select, {
+    }, React.createElement(Select, {
       value: entry.database || '',
       options: pair.sourceDatabases || [],
       allowCreate: true,
@@ -325,7 +518,7 @@ function PairCard(props) {
       onChange: v => onUpdateEntry(idx, kind, i, {
         database: v
       })
-    }), /*#__PURE__*/React.createElement(Select, {
+    }), React.createElement(Select, {
       value: entry.tables || [],
       multiple: true,
       allowCreate: true,
@@ -340,21 +533,21 @@ function PairCard(props) {
       onChange: v => onUpdateEntry(idx, kind, i, {
         tables: v
       })
-    }), /*#__PURE__*/React.createElement("button", {
+    }), React.createElement("button", {
       className: "rx-btn",
       disabled: !isConcreteDb(entry.database),
       onClick: () => onLoadTables(idx, kind, i)
-    }, "\u52A0\u8F7D\u8BE5\u5E93\u8868"), /*#__PURE__*/React.createElement("button", {
+    }, "\u52A0\u8F7D\u8BE5\u5E93\u8868"), React.createElement("button", {
       className: "rx-btn rx-btn-danger",
       onClick: () => onRemoveDbIgnore(idx, kind, i)
-    }, "\u5220\u9664"))), /*#__PURE__*/React.createElement("button", {
+    }, "\u5220\u9664"))), React.createElement("button", {
       className: "rx-btn",
       onClick: () => onAddDbIgnore(idx, kind)
     }, "+ \u6DFB\u52A0\u5E93\u5FFD\u7565"));
   };
-  return /*#__PURE__*/React.createElement("div", {
+  return React.createElement("div", {
     className: "card host-pair"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     style: {
       display: 'flex',
       justifyContent: 'space-between',
@@ -362,37 +555,37 @@ function PairCard(props) {
       flexWrap: 'wrap',
       gap: 8
     }
-  }, /*#__PURE__*/React.createElement("h3", {
+  }, React.createElement("h3", {
     style: {
       margin: 0
     }
-  }, "\u4E3B\u673A\u5BF9 #", idx + 1, "\u3000", /*#__PURE__*/React.createElement("span", {
+  }, "\u4E3B\u673A\u5BF9 #", idx + 1, "\u3000", React.createElement("span", {
     className: "hp-key"
-  }, pair.sourceHost, " \u2192 ", pair.targetHost)), canRemove && /*#__PURE__*/React.createElement("button", {
+  }, pair.sourceHost, " \u2192 ", pair.targetHost)), canRemove && React.createElement("button", {
     className: "rx-btn rx-btn-danger",
     onClick: () => onRemovePair(idx)
-  }, "\u5220\u9664\u6B64\u4E3B\u673A\u5BF9")), /*#__PURE__*/React.createElement("p", {
+  }, "\u5220\u9664\u6B64\u4E3B\u673A\u5BF9")), React.createElement("p", {
     className: "desc-cell",
     style: {
       margin: '8px 0 12px'
     }
-  }, "\u586B\u5199", /*#__PURE__*/React.createElement("b", null, "\u6E90\u4E3B\u673A"), "\u4E0E", /*#__PURE__*/React.createElement("b", null, "\u76EE\u6807\u4E3B\u673A"), "\u7684 IP / \u7AEF\u53E3 / \u8D26\u53F7 / \u5BC6\u7801\u3002\u300C\u5FFD\u7565\u6574\u5E93\u300D\u4E0E\u300C\u6309\u5E93\u5FFD\u7565\u8868\u300D\u5747\u53EF\u4ECE\u6E90\u5E93\u52A8\u6001\u62C9\u53D6\u9009\u9879\u3002"), /*#__PURE__*/React.createElement("div", {
+  }, "\u586B\u5199", React.createElement("b", null, "\u6E90\u4E3B\u673A"), "\u4E0E", React.createElement("b", null, "\u76EE\u6807\u4E3B\u673A"), "\u7684 IP / \u7AEF\u53E3 / \u8D26\u53F7 / \u5BC6\u7801\u3002\u300C\u5FFD\u7565\u6574\u5E93\u300D\u4E0E\u300C\u6309\u5E93\u5FFD\u7565\u8868\u300D\u5747\u53EF\u4ECE\u6E90\u5E93\u52A8\u6001\u62C9\u53D6\u9009\u9879\u3002"), React.createElement("div", {
     style: {
       display: 'flex',
       gap: 24,
       flexWrap: 'wrap'
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     className: "rx-box"
-  }, /*#__PURE__*/React.createElement("h4", {
+  }, React.createElement("h4", {
     style: {
       color: 'var(--danger)'
     }
-  }, "\u6E90\u4E3B\u673A\uFF08\u751F\u4EA7\u4E2D\u5FC3\uFF09"), /*#__PURE__*/React.createElement("div", {
+  }, "\u6E90\u4E3B\u673A\uFF08\u751F\u4EA7\u4E2D\u5FC3\uFF09"), React.createElement("div", {
     className: "rx-field"
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u4E3B\u673A"), /*#__PURE__*/React.createElement("input", {
+  }, "\u4E3B\u673A"), React.createElement("input", {
     className: "rx-input",
     style: {
       border: '1px solid rgba(255,255,255,0.16)',
@@ -406,11 +599,11 @@ function PairCard(props) {
       sourceHost: e.target.value
     }),
     placeholder: "\u5982 127.0.0.1"
-  })), /*#__PURE__*/React.createElement("div", {
+  })), React.createElement("div", {
     className: "rx-field"
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u7AEF\u53E3"), /*#__PURE__*/React.createElement("input", {
+  }, "\u7AEF\u53E3"), React.createElement("input", {
     className: "rx-input",
     style: {
       border: '1px solid rgba(255,255,255,0.16)',
@@ -424,11 +617,11 @@ function PairCard(props) {
       sourcePort: e.target.value
     }),
     placeholder: "3306"
-  })), /*#__PURE__*/React.createElement("div", {
+  })), React.createElement("div", {
     className: "rx-field"
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u8D26\u53F7"), /*#__PURE__*/React.createElement("input", {
+  }, "\u8D26\u53F7"), React.createElement("input", {
     className: "rx-input",
     style: {
       border: '1px solid rgba(255,255,255,0.16)',
@@ -442,11 +635,11 @@ function PairCard(props) {
       sourceUser: e.target.value
     }),
     placeholder: "\u5982 root"
-  })), /*#__PURE__*/React.createElement("div", {
+  })), React.createElement("div", {
     className: "rx-field"
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u5BC6\u7801"), /*#__PURE__*/React.createElement("input", {
+  }, "\u5BC6\u7801"), React.createElement("input", {
     className: "rx-input",
     type: "password",
     style: {
@@ -461,17 +654,17 @@ function PairCard(props) {
       sourcePassword: e.target.value
     }),
     placeholder: "\u6570\u636E\u5E93\u5BC6\u7801"
-  }))), /*#__PURE__*/React.createElement("div", {
+  }))), React.createElement("div", {
     className: "rx-box"
-  }, /*#__PURE__*/React.createElement("h4", {
+  }, React.createElement("h4", {
     style: {
       color: 'var(--accent)'
     }
-  }, "\u76EE\u6807\u4E3B\u673A\uFF08\u707E\u5907\u4E2D\u5FC3\uFF09"), /*#__PURE__*/React.createElement("div", {
+  }, "\u76EE\u6807\u4E3B\u673A\uFF08\u707E\u5907\u4E2D\u5FC3\uFF09"), React.createElement("div", {
     className: "rx-field"
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u4E3B\u673A"), /*#__PURE__*/React.createElement("input", {
+  }, "\u4E3B\u673A"), React.createElement("input", {
     className: "rx-input",
     style: {
       border: '1px solid rgba(255,255,255,0.16)',
@@ -485,11 +678,11 @@ function PairCard(props) {
       targetHost: e.target.value
     }),
     placeholder: "\u5982 192.168.88.88"
-  })), /*#__PURE__*/React.createElement("div", {
+  })), React.createElement("div", {
     className: "rx-field"
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u7AEF\u53E3"), /*#__PURE__*/React.createElement("input", {
+  }, "\u7AEF\u53E3"), React.createElement("input", {
     className: "rx-input",
     style: {
       border: '1px solid rgba(255,255,255,0.16)',
@@ -503,11 +696,11 @@ function PairCard(props) {
       targetPort: e.target.value
     }),
     placeholder: "3306"
-  })), /*#__PURE__*/React.createElement("div", {
+  })), React.createElement("div", {
     className: "rx-field"
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u8D26\u53F7"), /*#__PURE__*/React.createElement("input", {
+  }, "\u8D26\u53F7"), React.createElement("input", {
     className: "rx-input",
     style: {
       border: '1px solid rgba(255,255,255,0.16)',
@@ -521,11 +714,11 @@ function PairCard(props) {
       targetUser: e.target.value
     }),
     placeholder: "\u5982 root"
-  })), /*#__PURE__*/React.createElement("div", {
+  })), React.createElement("div", {
     className: "rx-field"
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u5BC6\u7801"), /*#__PURE__*/React.createElement("input", {
+  }, "\u5BC6\u7801"), React.createElement("input", {
     className: "rx-input",
     type: "password",
     style: {
@@ -540,62 +733,62 @@ function PairCard(props) {
       targetPassword: e.target.value
     }),
     placeholder: "\u6570\u636E\u5E93\u5BC6\u7801"
-  })))), /*#__PURE__*/React.createElement("div", {
+  })))), React.createElement("div", {
     className: "toolbar",
     style: {
       marginTop: 6
     }
-  }, /*#__PURE__*/React.createElement("button", {
+  }, React.createElement("button", {
     className: "rx-btn",
     disabled: pair.testing,
     onClick: () => onTest(idx)
-  }, pair.testing ? '测试中...' : '测试连接'), /*#__PURE__*/React.createElement("button", {
+  }, pair.testing ? '测试中...' : '测试连接'), React.createElement("button", {
     className: "rx-btn",
     disabled: pair.loadingDbs,
     onClick: () => onLoadDbs(idx)
-  }, pair.loadingDbs ? '加载中...' : '加载源库列表'), pair.testResult && /*#__PURE__*/React.createElement("span", {
+  }, pair.loadingDbs ? '加载中...' : '加载源库列表'), pair.testResult && React.createElement("span", {
     className: "desc-cell"
-  }, /*#__PURE__*/React.createElement("span", {
+  }, React.createElement("span", {
     className: 'rx-tag-static ' + (pair.testResult.source.ok ? 'rx-success' : 'rx-danger'),
     style: {
       marginRight: 6
     }
-  }, "\u6E90\u4E3B\u673A: ", pair.testResult.source.ok ? 'OK' : '失败'), /*#__PURE__*/React.createElement("span", {
+  }, "\u6E90\u4E3B\u673A: ", pair.testResult.source.ok ? 'OK' : '失败'), React.createElement("span", {
     className: 'rx-tag-static ' + (pair.testResult.target.ok ? 'rx-success' : 'rx-danger')
-  }, "\u76EE\u6807\u4E3B\u673A: ", pair.testResult.target.ok ? 'OK' : '失败'), (!pair.testResult.source.ok || !pair.testResult.target.ok) && /*#__PURE__*/React.createElement("span", {
+  }, "\u76EE\u6807\u4E3B\u673A: ", pair.testResult.target.ok ? 'OK' : '失败'), (!pair.testResult.source.ok || !pair.testResult.target.ok) && React.createElement("span", {
     className: "rx-err",
     style: {
       marginLeft: 8
     }
-  }, (!pair.testResult.source.ok ? '源:' + pair.testResult.source.message : '') + ' ' + (!pair.testResult.target.ok ? '目标:' + pair.testResult.target.message : '')))), pair.sourceDatabases.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, (!pair.testResult.source.ok ? '源:' + pair.testResult.source.message : '') + ' ' + (!pair.testResult.target.ok ? '目标:' + pair.testResult.target.message : '')))), pair.sourceDatabases.length > 0 && React.createElement("div", {
     className: "desc-cell",
     style: {
       marginTop: 8
     }
-  }, "\u6E90\u4E3B\u673A\u4E0B ", /*#__PURE__*/React.createElement("b", null, pair.sourceDatabases.length), " \u4E2A\u7528\u6237\u5E93\uFF08\u5DF2\u6392\u9664\u7CFB\u7EDF\u5E93\uFF09\uFF1A", pair.sourceDatabases.map(db => /*#__PURE__*/React.createElement("span", {
+  }, "\u6E90\u4E3B\u673A\u4E0B ", React.createElement("b", null, pair.sourceDatabases.length), " \u4E2A\u7528\u6237\u5E93\uFF08\u5DF2\u6392\u9664\u7CFB\u7EDF\u5E93\uFF09\uFF1A", pair.sourceDatabases.map(db => React.createElement("span", {
     key: db,
     className: "rx-tag-static rx-info",
     style: {
       margin: '0 5px 5px 0'
     }
-  }, db))), /*#__PURE__*/React.createElement("h4", {
+  }, db))), React.createElement("h4", {
     className: "block-h"
-  }, "\u2461 \u5FFD\u7565\u914D\u7F6E\uFF08\u53EA\u9700\u914D\u7F6E\u201C\u5FFD\u7565\u54EA\u4E9B\u201D\uFF09"), /*#__PURE__*/React.createElement("p", {
+  }, "\u2461 \u5FFD\u7565\u914D\u7F6E\uFF08\u53EA\u9700\u914D\u7F6E\u201C\u5FFD\u7565\u54EA\u4E9B\u201D\uFF09"), React.createElement("p", {
     className: "desc-cell",
     style: {
       margin: '0 0 10px'
     }
-  }, /*#__PURE__*/React.createElement("b", null, "\u5E93\u3001\u8868\u5747\u652F\u6301\u6B63\u5219 / \u901A\u914D"), "\uFF1A\u7CBE\u786E\u540D\u76F4\u63A5\u586B\uFF1B\u901A\u914D\u7528 ", /*#__PURE__*/React.createElement("code", {
+  }, React.createElement("b", null, "\u5E93\u3001\u8868\u5747\u652F\u6301\u6B63\u5219 / \u901A\u914D"), "\uFF1A\u7CBE\u786E\u540D\u76F4\u63A5\u586B\uFF1B\u901A\u914D\u7528 ", React.createElement("code", {
     className: "k"
-  }, "log_*"), "\uFF1B\u6B63\u5219\u4EE5 ", /*#__PURE__*/React.createElement("code", {
+  }, "log_*"), "\uFF1B\u6B63\u5219\u4EE5 ", React.createElement("code", {
     className: "k"
-  }, "re:"), " \u5F00\u5934\uFF08\u5982 ", /*#__PURE__*/React.createElement("code", {
+  }, "re:"), " \u5F00\u5934\uFF08\u5982 ", React.createElement("code", {
     className: "k"
-  }, "re:^tmp_.*"), "\uFF09\u3002", /*#__PURE__*/React.createElement("br", null), "\u5FFD\u7565\u8868\u91C7\u7528", /*#__PURE__*/React.createElement("b", null, "\u6309\u5E93\u5C42\u7EA7"), "\uFF1A\u6BCF\u4E2A\u5E93\u53EF\u914D\u7F6E\u4E0D\u540C\u7684\u5FFD\u7565\u8868\uFF1B\u6574\u5E93\u5FFD\u7565\u3001\u901A\u7528\u5FFD\u7565\u5BF9\u6240\u6709\u5E93\u751F\u6548\u3002"), /*#__PURE__*/React.createElement("div", {
+  }, "re:^tmp_.*"), "\uFF09\u3002", React.createElement("br", null), "\u5FFD\u7565\u8868\u91C7\u7528", React.createElement("b", null, "\u6309\u5E93\u5C42\u7EA7"), "\uFF1A\u6BCF\u4E2A\u5E93\u53EF\u914D\u7F6E\u4E0D\u540C\u7684\u5FFD\u7565\u8868\uFF1B\u6574\u5E93\u5FFD\u7565\u3001\u901A\u7528\u5FFD\u7565\u5BF9\u6240\u6709\u5E93\u751F\u6548\u3002"), React.createElement("div", {
     className: "rx-field"
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u5FFD\u7565\u6574\u5E93"), /*#__PURE__*/React.createElement(Select, {
+  }, "\u5FFD\u7565\u6574\u5E93"), React.createElement(Select, {
     value: pair.ignoreDatabases,
     multiple: true,
     allowCreate: true,
@@ -606,13 +799,13 @@ function PairCard(props) {
     onChange: v => onUpdatePair(idx, {
       ignoreDatabases: v
     })
-  })), renderDbIgnore('dml'), renderDbIgnore('ddl'), /*#__PURE__*/React.createElement("h4", {
+  })), renderDbIgnore('dml'), renderDbIgnore('ddl'), React.createElement("h4", {
     className: "block-h"
-  }, "\u2461-c \u901A\u7528\u5FFD\u7565\uFF08\u6240\u6709\u5E93\uFF09"), /*#__PURE__*/React.createElement("div", {
+  }, "\u2461-c \u901A\u7528\u5FFD\u7565\uFF08\u6240\u6709\u5E93\uFF09"), React.createElement("div", {
     className: "rx-field"
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u901A\u7528\u5FFD\u7565(DML+DDL)"), /*#__PURE__*/React.createElement(Select, {
+  }, "\u901A\u7528\u5FFD\u7565(DML+DDL)"), React.createElement(Select, {
     value: pair.commonIgnoreTables,
     multiple: true,
     allowCreate: true,
@@ -622,11 +815,11 @@ function PairCard(props) {
     onChange: v => onUpdatePair(idx, {
       commonIgnoreTables: v
     })
-  })), /*#__PURE__*/React.createElement("div", {
+  })), React.createElement("div", {
     className: "rx-field"
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u901A\u7528\u5FFD\u7565(\u4EC5DDL)"), /*#__PURE__*/React.createElement(Select, {
+  }, "\u901A\u7528\u5FFD\u7565(\u4EC5DDL)"), React.createElement(Select, {
     value: pair.commonDdlIgnoreTables,
     multiple: true,
     allowCreate: true,
@@ -636,16 +829,16 @@ function PairCard(props) {
     onChange: v => onUpdatePair(idx, {
       commonDdlIgnoreTables: v
     })
-  })), /*#__PURE__*/React.createElement("h4", {
+  })), React.createElement("h4", {
     className: "block-h"
-  }, "\u2462 \u5B57\u6BB5\u8F6C\u6362\u89C4\u5219\uFF08\u6E90\u503C \u2192 \u76EE\u6807\u503C\uFF0C\u5982 IP \u66FF\u6362\uFF09"), /*#__PURE__*/React.createElement("div", {
+  }, "\u2462 \u5B57\u6BB5\u8F6C\u6362\u89C4\u5219\uFF08\u6E90\u503C \u2192 \u76EE\u6807\u503C\uFF0C\u5982 IP \u66FF\u6362\uFF09"), React.createElement("div", {
     className: "rx-collapse",
     style: {
       border: '1px solid var(--border-strong)',
       borderRadius: 6,
       padding: '0 12px'
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     className: "rx-collapse-head",
     style: {
       padding: '10px 0'
@@ -653,12 +846,12 @@ function PairCard(props) {
     onClick: () => onUpdatePair(idx, {
       advActive: !pair.advActive
     })
-  }, pair.advActive ? '▾' : '▸', " \u5B57\u6BB5\u8F6C\u6362\u89C4\u5219\uFF08\u5E93-\u8868-\u5B57\u6BB5\uFF0C\u652F\u6301 * \u901A\u914D\uFF1B\u4E3B\u952E\u5217\u4E0D\u53C2\u4E0E\u8F6C\u6362\uFF09"), pair.advActive && /*#__PURE__*/React.createElement("div", {
+  }, pair.advActive ? '▾' : '▸', " \u5B57\u6BB5\u8F6C\u6362\u89C4\u5219\uFF08\u5E93-\u8868-\u5B57\u6BB5\uFF0C\u652F\u6301 * \u901A\u914D\uFF1B\u4E3B\u952E\u5217\u4E0D\u53C2\u4E0E\u8F6C\u6362\uFF09"), pair.advActive && React.createElement("div", {
     className: "rx-collapse-body"
-  }, (pair.transformRules || []).map((r, ridx) => /*#__PURE__*/React.createElement("div", {
+  }, (pair.transformRules || []).map((r, ridx) => React.createElement("div", {
     className: "rule-row",
     key: ridx
-  }, /*#__PURE__*/React.createElement("input", {
+  }, React.createElement("input", {
     className: "rx-input",
     style: {
       width: 130,
@@ -671,7 +864,7 @@ function PairCard(props) {
       dbName: e.target.value
     }),
     placeholder: "\u5E93\u540D(*)"
-  }), /*#__PURE__*/React.createElement("input", {
+  }), React.createElement("input", {
     className: "rx-input",
     style: {
       width: 130,
@@ -684,7 +877,7 @@ function PairCard(props) {
       tableName: e.target.value
     }),
     placeholder: "\u8868\u540D(*)"
-  }), /*#__PURE__*/React.createElement("input", {
+  }), React.createElement("input", {
     className: "rx-input",
     style: {
       width: 130,
@@ -697,7 +890,7 @@ function PairCard(props) {
       fieldName: e.target.value
     }),
     placeholder: "\u5B57\u6BB5\u540D"
-  }), /*#__PURE__*/React.createElement("input", {
+  }), React.createElement("input", {
     className: "rx-input",
     style: {
       width: 130,
@@ -710,7 +903,7 @@ function PairCard(props) {
       sourceValue: e.target.value
     }),
     placeholder: "\u6E90\u503C"
-  }), /*#__PURE__*/React.createElement("input", {
+  }), React.createElement("input", {
     className: "rx-input",
     style: {
       width: 130,
@@ -723,27 +916,25 @@ function PairCard(props) {
       targetValue: e.target.value
     }),
     placeholder: "\u76EE\u6807\u503C"
-  }), /*#__PURE__*/React.createElement("button", {
+  }), React.createElement("button", {
     className: "rx-btn rx-btn-danger",
     onClick: () => onRemoveRule(idx, ridx)
-  }, "\u5220\u9664"))), /*#__PURE__*/React.createElement("button", {
+  }, "\u5220\u9664"))), React.createElement("button", {
     className: "rx-btn",
     onClick: () => onAddRule(idx)
-  }, "+ \u6DFB\u52A0\u89C4\u5219"))), /*#__PURE__*/React.createElement("div", {
+  }, "+ \u6DFB\u52A0\u89C4\u5219"))), React.createElement("div", {
     className: "toolbar",
     style: {
       marginTop: 10
     }
-  }, /*#__PURE__*/React.createElement("button", {
+  }, React.createElement("button", {
     className: "rx-btn rx-btn-primary",
     disabled: pair.adding,
     onClick: () => onSave(idx)
-  }, pair.adding ? '保存中...' : '保存并开始同步'), /*#__PURE__*/React.createElement("span", {
+  }, pair.adding ? '保存中...' : '保存并开始同步'), React.createElement("span", {
     className: "desc-cell"
   }, "\u5C06\u6309\u6E90/\u76EE\u6807\u4E3B\u673A\u5BF9\u521B\u5EFA\u540C\u6B65\u4F5C\u4E1A\uFF0C\u81EA\u52A8\u540C\u6B65\u8BE5\u6E90\u4E3B\u673A\u4E0B\u6240\u6709\u7528\u6237\u5E93\u4E0E\u8868\uFF08\u5FFD\u7565\u9879\u9664\u5916\uFF09\u3002")));
 }
-
-/* ============ 主应用 ============ */
 function App() {
   const defaultBaseUrl = window.location.protocol === 'http:' || window.location.protocol === 'https:' ? window.location.origin : 'http://127.0.0.1:8080';
   const [baseUrl, setBaseUrl] = useState(defaultBaseUrl);
@@ -763,8 +954,6 @@ function App() {
   const [configJson, setConfigJson] = useState('');
   const [jsonError, setJsonError] = useState('');
   const [adding, setAdding] = useState(false);
-
-  /* ---- 操作日志 ---- */
   const [logs, setLogs] = useState([]);
   const [logsTotal, setLogsTotal] = useState(0);
   const [logsPage, setLogsPage] = useState(1);
@@ -789,7 +978,6 @@ function App() {
     endTime: nowStr
   });
   const [logDetail, setLogDetail] = useState(null);
-  /* datetime-local 需要 yyyy-MM-ddTHH:mm 格式，内部状态用 yyyy-MM-dd HH:mm:ss */
   const toDtl = s => s ? s.replace(' ', 'T').substring(0, 16) : '';
   const fromDtl = s => s ? s.replace('T', ' ') + ':00' : '';
   const [status, setStatus] = useState({
@@ -813,8 +1001,6 @@ function App() {
   const [drawer, setDrawer] = useState(false);
   const [current, setCurrent] = useState(null);
   const timerRef = useRef(null);
-
-  /* http 包装：返回后端 JSON body（Result 包裹或裸数据） */
   const http = useCallback(async ({
     url,
     method = 'GET',
@@ -833,7 +1019,7 @@ function App() {
     let json = {};
     try {
       json = await res.json();
-    } catch (e) {/* ignore */}
+    } catch (e) {}
     if (res.status === 401) {
       setAuthed(false);
       toast('warning', '登录已过期，请重新登录');
@@ -844,7 +1030,6 @@ function App() {
       toast('error', '请求失败: ' + detail);
       throw new Error('http ' + res.status);
     }
-    /* HTTP 200 但业务失败（如登录密码错误）—— 显示后端返回的错误消息 */
     if (json && json.success === false) {
       const detail = json.message || '操作失败';
       toast('error', detail);
@@ -852,15 +1037,12 @@ function App() {
     }
     return json;
   }, [baseUrl]);
-
-  /* ---- 鉴权 ---- */
   const checkAuth = useCallback(async () => {
     try {
       const res = await fetch(baseUrl + '/auth/me', {
         credentials: 'include'
       });
       const json = await res.json().catch(() => ({}));
-      // /auth/me 永远返回 200，用 data.loggedIn 表达登录态，不再靠 401 探测（避免控制台 401 噪声）
       const d = json.data || {};
       if (d.loggedIn && d.username) {
         setAuthed(true);
@@ -874,7 +1056,6 @@ function App() {
       setAuthed(false);
       setCurrentUser('');
     }
-    // eslint-disable-next-line
   }, [baseUrl]);
   const doLogin = async () => {
     if (!authForm.username || !authForm.password) {
@@ -894,7 +1075,7 @@ function App() {
       setCurrentUser(r.data && r.data.username || authForm.username);
       toast('success', '登录成功');
       await loadAll();
-    } catch (e) {/* toast handled in http */} finally {
+    } catch (e) {} finally {
       setAuthLoading(false);
     }
   };
@@ -914,7 +1095,7 @@ function App() {
       });
       toast('success', '注册成功，正在登录...');
       await doLogin();
-    } catch (e) {/* */} finally {
+    } catch (e) {} finally {
       setAuthLoading(false);
     }
   };
@@ -924,12 +1105,10 @@ function App() {
         url: '/auth/logout',
         method: 'POST'
       });
-    } catch (e) {/* */}
+    } catch (e) {}
     setAuthed(false);
     setCurrentUser('');
   };
-
-  /* ---- 统计监控 ---- */
   const loadStatus = async () => {
     try {
       const r = await http({
@@ -939,7 +1118,7 @@ function App() {
         ...s,
         ...r
       }));
-    } catch (e) {/* */}
+    } catch (e) {}
   };
   const loadIpList = async () => {
     try {
@@ -947,7 +1126,7 @@ function App() {
         url: '/sync/ipList'
       });
       setIpList(Array.isArray(r) ? r : []);
-    } catch (e) {/* */}
+    } catch (e) {}
   };
   const loadDatabases = async ip => {
     setCurrentIp(ip);
@@ -956,7 +1135,7 @@ function App() {
         url: '/sync/databases/' + encodeURIComponent(ip)
       });
       setDatabases(Array.isArray(r) ? r : []);
-    } catch (e) {/* */}
+    } catch (e) {}
   };
   const loadList = async () => {
     const body = {
@@ -974,16 +1153,15 @@ function App() {
       });
       setList(r.results || []);
       setTotal(r.total || 0);
-    } catch (e) {/* */}
+    } catch (e) {}
   };
-  /* ---- 操作日志加载 ---- */
   const loadLogTypes = async () => {
     try {
       const r = await http({
         url: '/operation-log/types'
       });
       setLogTypes(r.types || []);
-    } catch (e) {/* */}
+    } catch (e) {}
   };
   const loadLogs = async p => {
     const pg = p || logsPage;
@@ -1000,7 +1178,7 @@ function App() {
       });
       setLogs(r.results || []);
       setLogsTotal(r.total || 0);
-    } catch (e) {/* */}
+    } catch (e) {}
   };
   const searchLogs = () => {
     setLogsPage(1);
@@ -1030,9 +1208,8 @@ function App() {
     setLoading(true);
     try {
       await Promise.all([loadStatus(), loadIpList(), loadList(), loadMappings()]);
-    } catch (e) {/* */}
+    } catch (e) {}
     setLoading(false);
-    // eslint-disable-next-line
   }, [page, pageSize, query]);
   const search = () => {
     setPage(1);
@@ -1064,7 +1241,7 @@ function App() {
       });
       setCurrent(r.data);
       setDrawer(true);
-    } catch (e) {/* */}
+    } catch (e) {}
   };
   const resync = async () => {
     if (!selectedRows.length) {
@@ -1086,10 +1263,8 @@ function App() {
       const fail = r.data && r.data.failed ? r.data.failed.length : 0;
       toast('success', '已提交重新同步：成功 ' + ok + '，失败 ' + fail);
       setTimeout(loadAll, 1500);
-    } catch (e) {/* */}
+    } catch (e) {}
   };
-
-  /* ---- 主机对配置 ---- */
   const updatePair = (idx, patch) => setHostPairs(ps => ps.map((p, i) => i === idx ? {
     ...p,
     ...patch
@@ -1147,7 +1322,7 @@ function App() {
         testResult: r.data
       });
       if (r.data.source.ok && r.data.target.ok) toast('success', '源主机与目标主机连接测试均通过');else toast('error', '连接测试未通过');
-    } catch (e) {/* */} finally {
+    } catch (e) {} finally {
       updatePair(idx, {
         testing: false
       });
@@ -1174,7 +1349,7 @@ function App() {
         sourceDatabases: r.data || []
       });
       toast('success', '已加载源主机库列表（' + (r.data || []).length + ' 个，已排除系统库）');
-    } catch (e) {/* */} finally {
+    } catch (e) {} finally {
       updatePair(idx, {
         loadingDbs: false
       });
@@ -1215,7 +1390,7 @@ function App() {
         tableCache
       });
       toast('success', '已加载库 ' + entry.database + ' 的表清单（' + (r.data || []).length + ' 张）');
-    } catch (e) {/* */} finally {
+    } catch (e) {} finally {
       updatePair(idx, {
         loadingTablesDb: null
       });
@@ -1280,14 +1455,12 @@ function App() {
       reportAddResult(r.data || {});
       await loadMappings();
       await loadAll();
-    } catch (e) {/* */} finally {
+    } catch (e) {} finally {
       updatePair(idx, {
         adding: false
       });
     }
   };
-
-  /* ---- JSON 双向互转 ---- */
   const parseJson = () => {
     try {
       const obj = JSON.parse(configJson);
@@ -1378,22 +1551,20 @@ function App() {
       if (anyCreated) toast('success', '已开始同步主机对（JSON）');else if (anyFail) toast('error', '部分主机对保存失败');else toast('warning', '所有主机对已存在（已跳过）');
       await loadMappings();
       await loadAll();
-    } catch (e) {/* */} finally {
+    } catch (e) {} finally {
       setAdding(false);
     }
   };
   const onConfigModeChange = mode => {
     if (mode === 'json' && !configJson.trim()) formToJson();
   };
-
-  /* ---- 已配置主机对 ---- */
   const loadMappings = async () => {
     try {
       const r = await http({
         url: '/sync/mappings'
       });
       setMappingsList(r.data || []);
-    } catch (e) {/* */}
+    } catch (e) {}
   };
   const removeMapping = async row => {
     try {
@@ -1407,10 +1578,8 @@ function App() {
       toast('success', '已移除主机对：' + row.instanceKey);
       await loadMappings();
       await loadAll();
-    } catch (e) {/* */}
+    } catch (e) {}
   };
-
-  /* ---- 生命周期：自动刷新 ---- */
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
@@ -1425,20 +1594,18 @@ function App() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [authed, activeTab, loadAll]);
-
-  /* ---- 登录页 ---- */
   if (!authed) {
-    return /*#__PURE__*/React.createElement("div", {
+    return React.createElement("div", {
       className: "login-wrap"
-    }, /*#__PURE__*/React.createElement("div", {
+    }, React.createElement("div", {
       className: "login-card"
-    }, /*#__PURE__*/React.createElement("h2", null, "DRPlatform \u7BA1\u7406\u540E\u53F0"), /*#__PURE__*/React.createElement("div", {
+    }, React.createElement("h2", null, "DRPlatform \u7BA1\u7406\u540E\u53F0"), React.createElement("div", {
       className: "tip"
-    }, "\u8BF7\u767B\u5F55\u540E\u4F7F\u7528\u540C\u6B65\u914D\u7F6E\u4E0E\u76D1\u63A7\u529F\u80FD"), authMode === 'login' ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    }, "\u8BF7\u767B\u5F55\u540E\u4F7F\u7528\u540C\u6B65\u914D\u7F6E\u4E0E\u76D1\u63A7\u529F\u80FD"), authMode === 'login' ? React.createElement("div", null, React.createElement("div", {
       className: "rx-field"
-    }, /*#__PURE__*/React.createElement("label", {
+    }, React.createElement("label", {
       className: "rx-label"
-    }, "\u7528\u6237\u540D"), /*#__PURE__*/React.createElement("input", {
+    }, "\u7528\u6237\u540D"), React.createElement("input", {
       className: "rx-input",
       style: {
         border: '1px solid rgba(255,255,255,0.16)',
@@ -1454,11 +1621,11 @@ function App() {
       })),
       placeholder: "\u7528\u6237\u540D",
       onKeyDown: e => e.key === 'Enter' && doLogin()
-    })), /*#__PURE__*/React.createElement("div", {
+    })), React.createElement("div", {
       className: "rx-field"
-    }, /*#__PURE__*/React.createElement("label", {
+    }, React.createElement("label", {
       className: "rx-label"
-    }, "\u5BC6\u7801"), /*#__PURE__*/React.createElement("input", {
+    }, "\u5BC6\u7801"), React.createElement("input", {
       className: "rx-input",
       type: "password",
       style: {
@@ -1475,26 +1642,26 @@ function App() {
       })),
       placeholder: "\u5BC6\u7801",
       onKeyDown: e => e.key === 'Enter' && doLogin()
-    })), /*#__PURE__*/React.createElement("button", {
+    })), React.createElement("button", {
       className: "rx-btn rx-btn-primary login-submit",
       style: {
         width: '100%'
       },
       disabled: authLoading,
       onClick: doLogin
-    }, authLoading ? '登录中...' : '登 录'), /*#__PURE__*/React.createElement("div", {
+    }, authLoading ? '登录中...' : '登 录'), React.createElement("div", {
       style: {
         marginTop: 12,
         textAlign: 'right'
       }
-    }, /*#__PURE__*/React.createElement("span", {
+    }, React.createElement("span", {
       className: "rx-link",
       onClick: () => setAuthMode('register')
-    }, "\u6CA1\u6709\u8D26\u53F7\uFF1F\u6CE8\u518C"))) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    }, "\u6CA1\u6709\u8D26\u53F7\uFF1F\u6CE8\u518C"))) : React.createElement("div", null, React.createElement("div", {
       className: "rx-field"
-    }, /*#__PURE__*/React.createElement("label", {
+    }, React.createElement("label", {
       className: "rx-label"
-    }, "\u7528\u6237\u540D"), /*#__PURE__*/React.createElement("input", {
+    }, "\u7528\u6237\u540D"), React.createElement("input", {
       className: "rx-input",
       style: {
         border: '1px solid rgba(255,255,255,0.16)',
@@ -1509,11 +1676,11 @@ function App() {
         username: e.target.value
       })),
       placeholder: "3-32 \u4F4D"
-    })), /*#__PURE__*/React.createElement("div", {
+    })), React.createElement("div", {
       className: "rx-field"
-    }, /*#__PURE__*/React.createElement("label", {
+    }, React.createElement("label", {
       className: "rx-label"
-    }, "\u5BC6\u7801"), /*#__PURE__*/React.createElement("input", {
+    }, "\u5BC6\u7801"), React.createElement("input", {
       className: "rx-input",
       type: "password",
       style: {
@@ -1529,292 +1696,290 @@ function App() {
         password: e.target.value
       })),
       placeholder: "\u81F3\u5C11 6 \u4F4D"
-    })), /*#__PURE__*/React.createElement("button", {
+    })), React.createElement("button", {
       className: "rx-btn rx-btn-primary login-submit",
       style: {
         width: '100%'
       },
       disabled: authLoading,
       onClick: doRegister
-    }, authLoading ? '注册中...' : '注 册'), /*#__PURE__*/React.createElement("div", {
+    }, authLoading ? '注册中...' : '注 册'), React.createElement("div", {
       style: {
         marginTop: 12,
         textAlign: 'right'
       }
-    }, /*#__PURE__*/React.createElement("span", {
+    }, React.createElement("span", {
       className: "rx-link",
       onClick: () => setAuthMode('login')
-    }, "\u5DF2\u6709\u8D26\u53F7\uFF1F\u767B\u5F55")))), /*#__PURE__*/React.createElement("div", {
+    }, "\u5DF2\u6709\u8D26\u53F7\uFF1F\u767B\u5F55")))), React.createElement("div", {
       className: "login-viz",
       "aria-hidden": "true"
-    }, /*#__PURE__*/React.createElement("div", {
+    }, React.createElement("div", {
       className: "viz-header"
-    }, /*#__PURE__*/React.createElement("span", {
+    }, React.createElement("span", {
       className: "viz-dot"
-    }), /*#__PURE__*/React.createElement("span", {
+    }), React.createElement("span", {
       className: "viz-title"
-    }, "REAL-TIME SYNC TOPOLOGY")), /*#__PURE__*/React.createElement("svg", {
+    }, "REAL-TIME SYNC TOPOLOGY")), React.createElement("svg", {
       className: "sync-topo",
       viewBox: "0 0 560 440",
       preserveAspectRatio: "xMidYMid meet"
-    }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("filter", {
+    }, React.createElement("defs", null, React.createElement("filter", {
       id: "glow",
       x: "-50%",
       y: "-50%",
       width: "200%",
       height: "200%"
-    }, /*#__PURE__*/React.createElement("feGaussianBlur", {
+    }, React.createElement("feGaussianBlur", {
       stdDeviation: "2.5",
       result: "blur"
-    }), /*#__PURE__*/React.createElement("feMerge", null, /*#__PURE__*/React.createElement("feMergeNode", {
+    }), React.createElement("feMerge", null, React.createElement("feMergeNode", {
       in: "blur"
-    }), /*#__PURE__*/React.createElement("feMergeNode", {
+    }), React.createElement("feMergeNode", {
       in: "SourceGraphic"
-    })))), /*#__PURE__*/React.createElement("path", {
+    })))), React.createElement("path", {
       id: "lk1",
       d: "M92,80 L468,80",
       className: "link"
-    }), /*#__PURE__*/React.createElement("path", {
+    }), React.createElement("path", {
       id: "lk2",
       d: "M92,220 L468,220",
       className: "link"
-    }), /*#__PURE__*/React.createElement("path", {
+    }), React.createElement("path", {
       id: "lk3",
       d: "M92,360 L468,360",
       className: "link"
-    }), /*#__PURE__*/React.createElement("circle", {
+    }), React.createElement("circle", {
       r: "3.5",
       className: "flow-dot",
       filter: "url(#glow)"
-    }, /*#__PURE__*/React.createElement("animateMotion", {
+    }, React.createElement("animateMotion", {
       dur: "2.4s",
       repeatCount: "indefinite",
       begin: "0s"
-    }, /*#__PURE__*/React.createElement("mpath", {
+    }, React.createElement("mpath", {
       href: "#lk1"
-    }))), /*#__PURE__*/React.createElement("circle", {
+    }))), React.createElement("circle", {
       r: "3.5",
       className: "flow-dot",
       filter: "url(#glow)"
-    }, /*#__PURE__*/React.createElement("animateMotion", {
+    }, React.createElement("animateMotion", {
       dur: "2.4s",
       repeatCount: "indefinite",
       begin: "1.2s"
-    }, /*#__PURE__*/React.createElement("mpath", {
+    }, React.createElement("mpath", {
       href: "#lk1"
-    }))), /*#__PURE__*/React.createElement("circle", {
+    }))), React.createElement("circle", {
       r: "3.5",
       className: "flow-dot",
       filter: "url(#glow)"
-    }, /*#__PURE__*/React.createElement("animateMotion", {
+    }, React.createElement("animateMotion", {
       dur: "2.8s",
       repeatCount: "indefinite",
       begin: "0.3s"
-    }, /*#__PURE__*/React.createElement("mpath", {
+    }, React.createElement("mpath", {
       href: "#lk2"
-    }))), /*#__PURE__*/React.createElement("circle", {
+    }))), React.createElement("circle", {
       r: "3.5",
       className: "flow-dot",
       filter: "url(#glow)"
-    }, /*#__PURE__*/React.createElement("animateMotion", {
+    }, React.createElement("animateMotion", {
       dur: "2.8s",
       repeatCount: "indefinite",
       begin: "1.7s"
-    }, /*#__PURE__*/React.createElement("mpath", {
+    }, React.createElement("mpath", {
       href: "#lk2"
-    }))), /*#__PURE__*/React.createElement("circle", {
+    }))), React.createElement("circle", {
       r: "3.5",
       className: "flow-dot",
       filter: "url(#glow)"
-    }, /*#__PURE__*/React.createElement("animateMotion", {
+    }, React.createElement("animateMotion", {
       dur: "2.6s",
       repeatCount: "indefinite",
       begin: "0.6s"
-    }, /*#__PURE__*/React.createElement("mpath", {
+    }, React.createElement("mpath", {
       href: "#lk3"
-    }))), /*#__PURE__*/React.createElement("circle", {
+    }))), React.createElement("circle", {
       r: "3.5",
       className: "flow-dot",
       filter: "url(#glow)"
-    }, /*#__PURE__*/React.createElement("animateMotion", {
+    }, React.createElement("animateMotion", {
       dur: "2.6s",
       repeatCount: "indefinite",
       begin: "1.9s"
-    }, /*#__PURE__*/React.createElement("mpath", {
+    }, React.createElement("mpath", {
       href: "#lk3"
-    }))), /*#__PURE__*/React.createElement("g", {
+    }))), React.createElement("g", {
       className: "node node-src",
       transform: "translate(92,80)"
-    }, /*#__PURE__*/React.createElement("rect", {
+    }, React.createElement("rect", {
       x: "-52",
       y: "-18",
       width: "104",
       height: "36",
       rx: "5",
       className: "node-box"
-    }), /*#__PURE__*/React.createElement("circle", {
+    }), React.createElement("circle", {
       cx: "-38",
       cy: "0",
       r: "3",
       className: "node-led"
-    }), /*#__PURE__*/React.createElement("text", {
+    }), React.createElement("text", {
       x: "-28",
       y: "-2",
       className: "node-ip"
-    }, "10.0.1.10"), /*#__PURE__*/React.createElement("text", {
+    }, "10.0.1.10"), React.createElement("text", {
       x: "-28",
       y: "11",
       className: "node-db"
-    }, "db_auth")), /*#__PURE__*/React.createElement("g", {
+    }, "db_auth")), React.createElement("g", {
       className: "node node-dst",
       transform: "translate(468,80)"
-    }, /*#__PURE__*/React.createElement("rect", {
+    }, React.createElement("rect", {
       x: "-52",
       y: "-18",
       width: "104",
       height: "36",
       rx: "5",
       className: "node-box"
-    }), /*#__PURE__*/React.createElement("circle", {
+    }), React.createElement("circle", {
       cx: "-38",
       cy: "0",
       r: "3",
       className: "node-led node-led-dst"
-    }), /*#__PURE__*/React.createElement("text", {
+    }), React.createElement("text", {
       x: "-28",
       y: "-2",
       className: "node-ip"
-    }, "10.8.8.1"), /*#__PURE__*/React.createElement("text", {
+    }, "10.8.8.1"), React.createElement("text", {
       x: "-28",
       y: "11",
       className: "node-db"
-    }, "db_auth")), /*#__PURE__*/React.createElement("g", {
+    }, "db_auth")), React.createElement("g", {
       className: "node node-src",
       transform: "translate(92,220)"
-    }, /*#__PURE__*/React.createElement("rect", {
+    }, React.createElement("rect", {
       x: "-52",
       y: "-18",
       width: "104",
       height: "36",
       rx: "5",
       className: "node-box"
-    }), /*#__PURE__*/React.createElement("circle", {
+    }), React.createElement("circle", {
       cx: "-38",
       cy: "0",
       r: "3",
       className: "node-led"
-    }), /*#__PURE__*/React.createElement("text", {
+    }), React.createElement("text", {
       x: "-28",
       y: "-2",
       className: "node-ip"
-    }, "10.0.1.20"), /*#__PURE__*/React.createElement("text", {
+    }, "10.0.1.20"), React.createElement("text", {
       x: "-28",
       y: "11",
       className: "node-db"
-    }, "db_log")), /*#__PURE__*/React.createElement("g", {
+    }, "db_log")), React.createElement("g", {
       className: "node node-dst",
       transform: "translate(468,220)"
-    }, /*#__PURE__*/React.createElement("rect", {
+    }, React.createElement("rect", {
       x: "-52",
       y: "-18",
       width: "104",
       height: "36",
       rx: "5",
       className: "node-box"
-    }), /*#__PURE__*/React.createElement("circle", {
+    }), React.createElement("circle", {
       cx: "-38",
       cy: "0",
       r: "3",
       className: "node-led node-led-dst"
-    }), /*#__PURE__*/React.createElement("text", {
+    }), React.createElement("text", {
       x: "-28",
       y: "-2",
       className: "node-ip"
-    }, "10.8.8.2"), /*#__PURE__*/React.createElement("text", {
+    }, "10.8.8.2"), React.createElement("text", {
       x: "-28",
       y: "11",
       className: "node-db"
-    }, "db_log")), /*#__PURE__*/React.createElement("g", {
+    }, "db_log")), React.createElement("g", {
       className: "node node-src",
       transform: "translate(92,360)"
-    }, /*#__PURE__*/React.createElement("rect", {
+    }, React.createElement("rect", {
       x: "-52",
       y: "-18",
       width: "104",
       height: "36",
       rx: "5",
       className: "node-box"
-    }), /*#__PURE__*/React.createElement("circle", {
+    }), React.createElement("circle", {
       cx: "-38",
       cy: "0",
       r: "3",
       className: "node-led"
-    }), /*#__PURE__*/React.createElement("text", {
+    }), React.createElement("text", {
       x: "-28",
       y: "-2",
       className: "node-ip"
-    }, "10.0.1.30"), /*#__PURE__*/React.createElement("text", {
+    }, "10.0.1.30"), React.createElement("text", {
       x: "-28",
       y: "11",
       className: "node-db"
-    }, "db_pay")), /*#__PURE__*/React.createElement("g", {
+    }, "db_pay")), React.createElement("g", {
       className: "node node-dst",
       transform: "translate(468,360)"
-    }, /*#__PURE__*/React.createElement("rect", {
+    }, React.createElement("rect", {
       x: "-52",
       y: "-18",
       width: "104",
       height: "36",
       rx: "5",
       className: "node-box"
-    }), /*#__PURE__*/React.createElement("circle", {
+    }), React.createElement("circle", {
       cx: "-38",
       cy: "0",
       r: "3",
       className: "node-led node-led-dst"
-    }), /*#__PURE__*/React.createElement("text", {
+    }), React.createElement("text", {
       x: "-28",
       y: "-2",
       className: "node-ip"
-    }, "10.8.8.3"), /*#__PURE__*/React.createElement("text", {
+    }, "10.8.8.3"), React.createElement("text", {
       x: "-28",
       y: "11",
       className: "node-db"
-    }, "db_pay")), /*#__PURE__*/React.createElement("text", {
+    }, "db_pay")), React.createElement("text", {
       x: "92",
       y: "30",
       className: "col-label"
-    }, "SOURCE \xB7 ACTIVE"), /*#__PURE__*/React.createElement("text", {
+    }, "SOURCE \xB7 ACTIVE"), React.createElement("text", {
       x: "468",
       y: "30",
       className: "col-label"
-    }, "TARGET \xB7 STANDBY")), /*#__PURE__*/React.createElement("div", {
+    }, "TARGET \xB7 STANDBY")), React.createElement("div", {
       className: "viz-footer"
-    }, /*#__PURE__*/React.createElement("span", {
+    }, React.createElement("span", {
       className: "vf-item"
-    }, /*#__PURE__*/React.createElement("span", {
+    }, React.createElement("span", {
       className: "vf-led vf-led-link"
-    }), "3 sync channels"), /*#__PURE__*/React.createElement("span", {
+    }), "3 sync channels"), React.createElement("span", {
       className: "vf-item"
-    }, "1:1 replication"))), /*#__PURE__*/React.createElement(ToastHost, null));
+    }, "1:1 replication"))), React.createElement(ToastHost, null));
   }
-
-  /* ---- 主界面 ---- */
   const selectedIds = new Set(selectedRows.map(r => r.id));
   const allChecked = list.length > 0 && list.every(r => selectedIds.has(r.id));
-  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  return React.createElement("div", null, React.createElement("div", {
     className: "topbar"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", null, React.createElement("div", {
     className: "title"
-  }, "DRPlatform \xB7 \u5730\u7406\u6570\u636E\u5E93\u707E\u5907\u540C\u6B65\u670D\u52A1"), /*#__PURE__*/React.createElement("div", {
+  }, "DRPlatform \xB7 \u5730\u7406\u6570\u636E\u5E93\u707E\u5907\u540C\u6B65\u670D\u52A1"), React.createElement("div", {
     className: "sub"
-  }, "Flink CDC \u65B9\u5411 \xB7 \u5185\u5D4C\u540C\u6B65\u5F15\u64CE\uFF08\u672C\u5730\u53EF\u8FD0\u884C\u7248\uFF09 \xB7 \u5B9E\u65F6\u707E\u5907\u4E00\u81F4\u6027\u4FDD\u969C")), /*#__PURE__*/React.createElement("div", {
+  }, "Flink CDC \u65B9\u5411 \xB7 \u5185\u5D4C\u540C\u6B65\u5F15\u64CE\uFF08\u672C\u5730\u53EF\u8FD0\u884C\u7248\uFF09 \xB7 \u5B9E\u65F6\u707E\u5907\u4E00\u81F4\u6027\u4FDD\u969C")), React.createElement("div", {
     style: {
       display: 'flex',
       alignItems: 'center',
       gap: 10
     }
-  }, /*#__PURE__*/React.createElement("input", {
+  }, React.createElement("input", {
     className: "rx-input",
     style: {
       width: 240,
@@ -1827,111 +1992,108 @@ function App() {
     value: baseUrl,
     onChange: e => setBaseUrl(e.target.value),
     placeholder: "\u540E\u7AEF\u5730\u5740"
-  }), /*#__PURE__*/React.createElement("button", {
+  }), React.createElement("button", {
     className: "rx-btn",
     onClick: loadAll
-  }, "\u5237\u65B0"), /*#__PURE__*/React.createElement("span", {
+  }, "\u5237\u65B0"), React.createElement("span", {
     className: "desc-cell",
     style: {
       opacity: .85
     }
-  }, "Hi, ", currentUser), /*#__PURE__*/React.createElement("button", {
+  }, "Hi, ", currentUser), React.createElement("button", {
     className: "rx-btn",
     onClick: doLogout
-  }, "\u9000\u51FA"))), /*#__PURE__*/React.createElement("div", {
+  }, "\u9000\u51FA"))), React.createElement("div", {
     className: "wrap"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     className: "rx-tabs"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     className: 'rx-tab' + (activeTab === 'stats' ? ' rx-tab-active' : ''),
     onClick: () => setActiveTab('stats')
-  }, "\u7EDF\u8BA1\u76D1\u63A7"), /*#__PURE__*/React.createElement("div", {
+  }, "\u7EDF\u8BA1\u76D1\u63A7"), React.createElement("div", {
     className: 'rx-tab' + (activeTab === 'config' ? ' rx-tab-active' : ''),
     onClick: () => setActiveTab('config')
-  }, "\u914D\u7F6E\u4E2D\u5FC3"), /*#__PURE__*/React.createElement("div", {
+  }, "\u914D\u7F6E\u4E2D\u5FC3"), React.createElement("div", {
     className: 'rx-tab' + (activeTab === 'logs' ? ' rx-tab-active' : ''),
     onClick: () => {
       setActiveTab('logs');
       loadLogTypes();
       loadLogs(1);
     }
-  }, "\u64CD\u4F5C\u65E5\u5FD7")), activeTab === 'stats' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, "\u64CD\u4F5C\u65E5\u5FD7")), activeTab === 'stats' && React.createElement("div", null, React.createElement("div", {
     className: "card"
-  }, /*#__PURE__*/React.createElement("h3", null, "\u540C\u6B65\u603B\u89C8"), /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("h3", null, "\u540C\u6B65\u603B\u89C8"), React.createElement("div", {
     className: "stat-row"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     className: "stat"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     className: "k"
-  }, "\u6574\u4F53\u72B6\u6001"), /*#__PURE__*/React.createElement("div", {
+  }, "\u6574\u4F53\u72B6\u6001"), React.createElement("div", {
     className: 'v ' + (status.status === 'NORMAL' || status.status === 1 ? 'ok' : 'bad')
-  }, status.desc || '加载中...')), /*#__PURE__*/React.createElement("div", {
+  }, status.desc || '加载中...')), React.createElement("div", {
     className: "stat"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     className: "k"
-  }, "\u4E3B\u673A\u5BF9 / \u8FD0\u884C\u4F5C\u4E1A"), /*#__PURE__*/React.createElement("div", {
+  }, "\u4E3B\u673A\u5BF9 / \u8FD0\u884C\u4F5C\u4E1A"), React.createElement("div", {
     className: "v info"
-  }, mappingsList.length, " / ", mappingsList.filter(m => m.running).length)), /*#__PURE__*/React.createElement("div", {
+  }, mappingsList.length, " / ", mappingsList.filter(m => m.running).length)), React.createElement("div", {
     className: "stat"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     className: "k"
-  }, "\u6700\u8FD1\u5F02\u5E38\u65F6\u95F4"), /*#__PURE__*/React.createElement("div", {
+  }, "\u6700\u8FD1\u5F02\u5E38\u65F6\u95F4"), React.createElement("div", {
     className: "v warn"
-  }, status.firstExceptionTime || '—')), /*#__PURE__*/React.createElement("div", {
+  }, status.firstExceptionTime || '—')), React.createElement("div", {
     className: "stat"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     className: "k"
-  }, "\u5143\u6570\u636E\u5E93"), /*#__PURE__*/React.createElement("div", {
+  }, "\u5143\u6570\u636E\u5E93"), React.createElement("div", {
     className: "v info"
-  }, "DRPlatform")))), /*#__PURE__*/React.createElement("div", {
+  }, "DRPlatform")))), React.createElement("div", {
     className: "card"
-  }, /*#__PURE__*/React.createElement("h3", null, "\u8282\u70B9\u4E0E\u6570\u636E\u5E93"), /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("h3", null, "\u8282\u70B9\u4E0E\u6570\u636E\u5E93"), React.createElement("div", {
     className: "rx-tablescroll"
-  }, /*#__PURE__*/React.createElement("table", {
+  }, React.createElement("table", {
     className: "rx-table"
-  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
+  }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {
     style: {
       width: 200
     }
-  }, "IP"), /*#__PURE__*/React.createElement("th", {
+  }, "IP"), React.createElement("th", {
     style: {
       width: 140
     }
-  }, "\u89D2\u8272"), /*#__PURE__*/React.createElement("th", null, "\u64CD\u4F5C"))), /*#__PURE__*/React.createElement("tbody", null, ipList.map((row, i) => /*#__PURE__*/React.createElement("tr", {
+  }, "\u89D2\u8272"), React.createElement("th", null, "\u64CD\u4F5C"))), React.createElement("tbody", null, ipList.map((row, i) => React.createElement("tr", {
     key: i
-  }, /*#__PURE__*/React.createElement("td", null, row.ip), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+  }, React.createElement("td", null, row.ip), React.createElement("td", null, React.createElement("span", {
     className: 'rx-tag-static ' + (row.type === '生产中心' ? 'rx-danger' : 'rx-success')
-  }, row.type)), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("button", {
+  }, row.type)), React.createElement("td", null, React.createElement("button", {
     className: "rx-btn rx-btn-primary",
     onClick: () => loadDatabases(row.ip)
-  }, "\u67E5\u770B\u5176\u4E0B\u6570\u636E\u5E93"))))))), databases.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, "\u67E5\u770B\u5176\u4E0B\u6570\u636E\u5E93"))))))), databases.length > 0 && React.createElement("div", {
     style: {
       marginTop: 12
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     className: "desc-cell",
     style: {
       marginBottom: 8
     }
-  }, "IP ", /*#__PURE__*/React.createElement("code", {
+  }, "IP ", React.createElement("code", {
     className: "k"
-  }, currentIp), " \u4E0B\u7528\u6237\u6570\u636E\u5E93\uFF08", databases.length, "\uFF09\uFF1A"), databases.map(db => /*#__PURE__*/React.createElement("span", {
+  }, currentIp), " \u4E0B\u7528\u6237\u6570\u636E\u5E93\uFF08", databases.length, "\uFF09\uFF1A"), databases.map(db => React.createElement("span", {
     key: db,
     className: "rx-tag-static rx-info",
     style: {
       margin: '0 6px 6px 0'
     }
-  }, db)))), /*#__PURE__*/React.createElement("div", {
+  }, db)))), React.createElement("div", {
     className: "card"
-  }, /*#__PURE__*/React.createElement("h3", null, "\u540C\u6B65\u8FDB\u5EA6\u5217\u8868"), /*#__PURE__*/React.createElement("div", {
-    className: "toolbar"
-  }, /*#__PURE__*/React.createElement("input", {
-    className: "rx-input",
+  }, React.createElement("h3", null, "\u540C\u6B65\u8FDB\u5EA6\u5217\u8868"), React.createElement("div", {
+    className: "toolbar stats-filter"
+  }, React.createElement("input", {
+    className: "rx-control",
     style: {
-      width: 150,
-      border: '1px solid rgba(255,255,255,0.16)',
-      borderRadius: 4,
-      padding: '6px 8px'
+      width: 150
     },
     value: query.ip,
     onChange: e => setQuery(q => ({
@@ -1939,13 +2101,10 @@ function App() {
       ip: e.target.value
     })),
     placeholder: "\u6E90IP\u7B5B\u9009"
-  }), /*#__PURE__*/React.createElement("input", {
-    className: "rx-input",
+  }), React.createElement("input", {
+    className: "rx-control",
     style: {
-      width: 160,
-      border: '1px solid rgba(255,255,255,0.16)',
-      borderRadius: 4,
-      padding: '6px 8px'
+      width: 160
     },
     value: query.sourceDbName,
     onChange: e => setQuery(q => ({
@@ -1953,100 +2112,102 @@ function App() {
       sourceDbName: e.target.value
     })),
     placeholder: "\u6E90\u5E93\u540D(\u6A21\u7CCA)"
-  }), /*#__PURE__*/React.createElement("select", {
+  }), React.createElement(Select, {
     style: {
-      width: 130,
-      border: '1px solid rgba(255,255,255,0.16)',
-      borderRadius: 4,
-      padding: '6px 8px'
+      width: 130
     },
-    value: query.state == null ? '' : query.state,
-    onChange: e => setQuery(q => ({
+    value: query.state == null ? '' : String(query.state),
+    options: [{
+      value: '0',
+      label: '失效'
+    }, {
+      value: '1',
+      label: '全量同步'
+    }, {
+      value: '2',
+      label: '同步中'
+    }, {
+      value: '3',
+      label: '中止'
+    }],
+    filterable: false,
+    placeholder: "\u72B6\u6001",
+    onChange: v => setQuery(q => ({
       ...q,
-      state: e.target.value === '' ? null : Number(e.target.value)
+      state: v === '' ? null : Number(v)
     }))
-  }, /*#__PURE__*/React.createElement("option", {
-    value: ""
-  }, "\u72B6\u6001"), /*#__PURE__*/React.createElement("option", {
-    value: "0"
-  }, "\u5931\u6548"), /*#__PURE__*/React.createElement("option", {
-    value: "1"
-  }, "\u5168\u91CF\u540C\u6B65"), /*#__PURE__*/React.createElement("option", {
-    value: "2"
-  }, "\u540C\u6B65\u4E2D"), /*#__PURE__*/React.createElement("option", {
-    value: "3"
-  }, "\u4E2D\u6B62")), /*#__PURE__*/React.createElement("button", {
+  }), React.createElement("button", {
     className: "rx-btn rx-btn-primary",
     onClick: search
-  }, "\u67E5\u8BE2"), /*#__PURE__*/React.createElement("button", {
+  }, "\u67E5\u8BE2"), React.createElement("button", {
     className: "rx-btn",
     onClick: resetQuery
-  }, "\u91CD\u7F6E"), /*#__PURE__*/React.createElement("button", {
+  }, "\u91CD\u7F6E"), React.createElement("button", {
     className: "rx-btn rx-btn-success",
     disabled: !selectedRows.length,
     onClick: resync
-  }, "\u91CD\u65B0\u540C\u6B65\u9009\u4E2D(", selectedRows.length, ")")), /*#__PURE__*/React.createElement("div", {
+  }, "\u91CD\u65B0\u540C\u6B65\u9009\u4E2D(", selectedRows.length, ")")), React.createElement("div", {
     className: "rx-tablescroll"
-  }, /*#__PURE__*/React.createElement("table", {
+  }, React.createElement("table", {
     className: "rx-table"
-  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
+  }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {
     style: {
       width: 46
     }
-  }, /*#__PURE__*/React.createElement("input", {
+  }, React.createElement("input", {
     type: "checkbox",
     checked: allChecked,
     onChange: e => toggleAll(e.target.checked)
-  })), /*#__PURE__*/React.createElement("th", {
+  })), React.createElement("th", {
     style: {
       width: 70
     }
-  }, "ID"), /*#__PURE__*/React.createElement("th", {
+  }, "ID"), React.createElement("th", {
     style: {
       width: 200
     }
-  }, "\u6E90(\u751F\u4EA7\u4E2D\u5FC3)"), /*#__PURE__*/React.createElement("th", {
+  }, "\u6E90(\u751F\u4EA7\u4E2D\u5FC3)"), React.createElement("th", {
     style: {
       width: 200
     }
-  }, "\u76EE\u6807(\u707E\u5907\u4E2D\u5FC3)"), /*#__PURE__*/React.createElement("th", {
+  }, "\u76EE\u6807(\u707E\u5907\u4E2D\u5FC3)"), React.createElement("th", {
     style: {
       width: 100
     }
-  }, "\u72B6\u6001"), /*#__PURE__*/React.createElement("th", {
+  }, "\u72B6\u6001"), React.createElement("th", {
     style: {
       width: 100
     }
-  }, "\u504F\u5DEE\u72B6\u6001"), /*#__PURE__*/React.createElement("th", null, "\u5904\u7406/\u7EDF\u8BA1\u4FE1\u606F"), /*#__PURE__*/React.createElement("th", {
+  }, "\u504F\u5DEE\u72B6\u6001"), React.createElement("th", null, "\u5904\u7406/\u7EDF\u8BA1\u4FE1\u606F"), React.createElement("th", {
     style: {
       width: 170
     }
-  }, "\u66F4\u65B0\u65F6\u95F4"), /*#__PURE__*/React.createElement("th", {
+  }, "\u66F4\u65B0\u65F6\u95F4"), React.createElement("th", {
     style: {
       width: 90
     }
-  }, "\u64CD\u4F5C"))), /*#__PURE__*/React.createElement("tbody", null, list.map(row => /*#__PURE__*/React.createElement("tr", {
+  }, "\u64CD\u4F5C"))), React.createElement("tbody", null, list.map(row => React.createElement("tr", {
     key: row.id
-  }, /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("input", {
+  }, React.createElement("td", null, React.createElement("input", {
     type: "checkbox",
     checked: selectedIds.has(row.id),
     onChange: e => toggleRow(row, e.target.checked)
-  })), /*#__PURE__*/React.createElement("td", null, row.id), /*#__PURE__*/React.createElement("td", null, row.sourceIp, " / ", row.sourceDbName), /*#__PURE__*/React.createElement("td", null, row.targetIp, " / ", row.targetDbName), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+  })), React.createElement("td", null, row.id), React.createElement("td", null, row.sourceIp, " / ", row.sourceDbName), React.createElement("td", null, row.targetIp, " / ", row.targetDbName), React.createElement("td", null, React.createElement("span", {
     className: 'rx-tag-static ' + stateTag(row.state)
-  }, stateDesc(row.state))), /*#__PURE__*/React.createElement("td", null, row.deviationStatus === 1 ? /*#__PURE__*/React.createElement("span", {
+  }, stateDesc(row.state))), React.createElement("td", null, row.deviationStatus === 1 ? React.createElement("span", {
     className: "rx-tag-static rx-success"
-  }, "\u6B63\u5E38") : row.deviationStatus === 2 ? /*#__PURE__*/React.createElement("span", {
+  }, "\u6B63\u5E38") : row.deviationStatus === 2 ? React.createElement("span", {
     className: "rx-tag-static rx-danger"
-  }, "\u5F02\u5E38") : '—'), /*#__PURE__*/React.createElement("td", null, row.processingMethod), /*#__PURE__*/React.createElement("td", null, row.updateTime), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("button", {
+  }, "\u5F02\u5E38") : '—'), React.createElement("td", null, row.processingMethod), React.createElement("td", null, row.updateTime), React.createElement("td", null, React.createElement("button", {
     className: "rx-btn rx-btn-primary",
     onClick: () => detail(row)
-  }, "\u8BE6\u60C5")))), list.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
+  }, "\u8BE6\u60C5")))), list.length === 0 && React.createElement("tr", null, React.createElement("td", {
     colSpan: 9,
     style: {
       textAlign: 'center',
       color: 'var(--text-3)'
     }
-  }, "\u6682\u65E0\u6570\u636E"))))), /*#__PURE__*/React.createElement("div", {
+  }, "\u6682\u65E0\u6570\u636E"))))), React.createElement("div", {
     style: {
       marginTop: 12,
       display: 'flex',
@@ -2054,16 +2215,16 @@ function App() {
       alignItems: 'center',
       gap: 14
     }
-  }, /*#__PURE__*/React.createElement("span", {
+  }, React.createElement("span", {
     className: "desc-cell"
-  }, "\u5171 ", total, " \u6761"), /*#__PURE__*/React.createElement(Pager, {
+  }, "\u5171 ", total, " \u6761"), React.createElement(Pager, {
     total: total,
     page: page,
     pageSize: pageSize,
     onChange: onPage
-  })))), activeTab === 'config' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  })))), activeTab === 'config' && React.createElement("div", null, React.createElement("div", {
     className: "card"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     style: {
       display: 'flex',
       alignItems: 'center',
@@ -2071,35 +2232,35 @@ function App() {
       flexWrap: 'wrap',
       gap: 10
     }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+  }, React.createElement("div", null, React.createElement("span", {
     className: "collapse-title"
-  }, "\u914D\u7F6E\u65B9\u5F0F"), /*#__PURE__*/React.createElement("span", {
+  }, "\u914D\u7F6E\u65B9\u5F0F"), React.createElement("span", {
     className: "desc-cell",
     style: {
       marginLeft: 10
     }
-  }, "\u8868\u5355\u9002\u5408\u5FEB\u901F\u5F55\u5165\uFF1BJSON \u9002\u5408\u6279\u91CF / \u590D\u5236\u7C98\u8D34 / \u7CBE\u7EC6\u63A7\u5236\uFF08\u4E24\u8005\u53CC\u5411\u540C\u6B65\uFF09\u3002")), /*#__PURE__*/React.createElement("div", {
+  }, "\u8868\u5355\u9002\u5408\u5FEB\u901F\u5F55\u5165\uFF1BJSON \u9002\u5408\u6279\u91CF / \u590D\u5236\u7C98\u8D34 / \u7CBE\u7EC6\u63A7\u5236\uFF08\u4E24\u8005\u53CC\u5411\u540C\u6B65\uFF09\u3002")), React.createElement("div", {
     className: "rx-radio"
-  }, /*#__PURE__*/React.createElement("button", {
+  }, React.createElement("button", {
     className: configMode === 'form' ? 'active' : '',
     onClick: () => {
       setConfigMode('form');
       onConfigModeChange('form');
     }
-  }, "\u8868\u5355\u65B9\u5F0F"), /*#__PURE__*/React.createElement("button", {
+  }, "\u8868\u5355\u65B9\u5F0F"), React.createElement("button", {
     className: configMode === 'json' ? 'active' : '',
     onClick: () => {
       setConfigMode('json');
       onConfigModeChange('json');
     }
-  }, "JSON \u65B9\u5F0F")))), configMode === 'form' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, "JSON \u65B9\u5F0F")))), configMode === 'form' && React.createElement("div", null, React.createElement("div", {
     className: "hp-actions"
-  }, /*#__PURE__*/React.createElement("button", {
+  }, React.createElement("button", {
     className: "rx-btn rx-btn-primary",
     onClick: addHostPair
-  }, "+ \u6DFB\u52A0\u4E3B\u673A\u5BF9"), /*#__PURE__*/React.createElement("span", {
+  }, "+ \u6DFB\u52A0\u4E3B\u673A\u5BF9"), React.createElement("span", {
     className: "desc-cell"
-  }, "\u53EF\u914D\u7F6E", /*#__PURE__*/React.createElement("b", null, "\u591A\u5BF9\u4E3B\u673A"), "\uFF08\u5FAE\u670D\u52A1\u5F02\u5730\u591A\u673A\u623F\u5907\u4EFD\uFF09\uFF0C\u6BCF\u5BF9\u72EC\u7ACB\u4FDD\u5B58\u4E0E\u8FD0\u884C\u3002\u8BE5\u6E90\u4E3B\u673A\u4E0B", /*#__PURE__*/React.createElement("b", null, "\u6240\u6709\u7528\u6237\u5E93\u4E0E\u8868\u81EA\u52A8\u540C\u6B65"), "\uFF08\u7CFB\u7EDF\u5E93\u4E0E\u5FFD\u7565\u9879\u9664\u5916\uFF09\uFF0C\u65B0\u589E\u5E93/\u8868\u5B9E\u65F6\u7EB3\u5165\u3002")), hostPairs.map((pair, idx) => /*#__PURE__*/React.createElement(PairCard, {
+  }, "\u53EF\u914D\u7F6E", React.createElement("b", null, "\u591A\u5BF9\u4E3B\u673A"), "\uFF08\u5FAE\u670D\u52A1\u5F02\u5730\u591A\u673A\u623F\u5907\u4EFD\uFF09\uFF0C\u6BCF\u5BF9\u72EC\u7ACB\u4FDD\u5B58\u4E0E\u8FD0\u884C\u3002\u8BE5\u6E90\u4E3B\u673A\u4E0B", React.createElement("b", null, "\u6240\u6709\u7528\u6237\u5E93\u4E0E\u8868\u81EA\u52A8\u540C\u6B65"), "\uFF08\u7CFB\u7EDF\u5E93\u4E0E\u5FFD\u7565\u9879\u9664\u5916\uFF09\uFF0C\u65B0\u589E\u5E93/\u8868\u5B9E\u65F6\u7EB3\u5165\u3002")), hostPairs.map((pair, idx) => React.createElement(PairCard, {
     key: idx,
     pair: pair,
     idx: idx,
@@ -2116,320 +2277,267 @@ function App() {
     onRemoveRule: onRemoveRule,
     onSave: savePair,
     onRemovePair: removeHostPair
-  }))), configMode === 'json' && /*#__PURE__*/React.createElement("div", {
+  }))), configMode === 'json' && React.createElement("div", {
     className: "card"
-  }, /*#__PURE__*/React.createElement("h3", null, "JSON \u914D\u7F6E\uFF08\u6574\u4EFD\u4E3B\u673A\u5BF9\u914D\u7F6E\uFF1A\u8FDE\u63A5 + \u5FFD\u7565\u9879 + \u8F6C\u6362\u89C4\u5219\uFF09"), /*#__PURE__*/React.createElement("p", {
+  }, React.createElement("h3", null, "JSON \u914D\u7F6E\uFF08\u6574\u4EFD\u4E3B\u673A\u5BF9\u914D\u7F6E\uFF1A\u8FDE\u63A5 + \u5FFD\u7565\u9879 + \u8F6C\u6362\u89C4\u5219\uFF09"), React.createElement("p", {
     className: "desc-cell",
     style: {
       margin: '-6px 0 12px'
     }
-  }, "\u53EF\u76F4\u63A5\u7F16\u8F91\u6216\u7C98\u8D34\u4E00\u4EFD JSON \u540E\u4FDD\u5B58\uFF1B", /*#__PURE__*/React.createElement("b", null, "\u5E93\u3001\u8868\u5747\u652F\u6301\u6B63\u5219"), "\u3002\u652F\u6301\u5355\u5BF9\u8C61\u6216\u5BF9\u8C61\u6570\u7EC4\uFF08\u591A\u4E3B\u673A\u5BF9\uFF09\u3002 \u5FFD\u7565\u8868\u91C7\u7528", /*#__PURE__*/React.createElement("b", null, "\u5C42\u7EA7\u7ED3\u6784"), " ", /*#__PURE__*/React.createElement("code", {
+  }, "\u53EF\u76F4\u63A5\u7F16\u8F91\u6216\u7C98\u8D34\u4E00\u4EFD JSON \u540E\u4FDD\u5B58\uFF1B", React.createElement("b", null, "\u5E93\u3001\u8868\u5747\u652F\u6301\u6B63\u5219"), "\u3002\u652F\u6301\u5355\u5BF9\u8C61\u6216\u5BF9\u8C61\u6570\u7EC4\uFF08\u591A\u4E3B\u673A\u5BF9\uFF09\u3002 \u5FFD\u7565\u8868\u91C7\u7528", React.createElement("b", null, "\u5C42\u7EA7\u7ED3\u6784"), " ", React.createElement("code", {
     className: "k"
-  }, 'ignoreTablesByDb:[{"database":"sales","tables":["t_log","re:^tmp_.*"]}]'), "\uFF0C \u5E76\u63D0\u4F9B ", /*#__PURE__*/React.createElement("code", {
+  }, 'ignoreTablesByDb:[{"database":"sales","tables":["t_log","re:^tmp_.*"]}]'), "\uFF0C \u5E76\u63D0\u4F9B ", React.createElement("code", {
     className: "k"
-  }, "commonIgnoreTables"), " / ", /*#__PURE__*/React.createElement("code", {
+  }, "commonIgnoreTables"), " / ", React.createElement("code", {
     className: "k"
-  }, "commonDdlIgnoreTables"), "\uFF08\u6240\u6709\u5E93\u751F\u6548\uFF09\u3002\u4E5F\u53EF\u7528\u4E0B\u65B9\u6309\u94AE\u4E0E\u8868\u5355\u76F8\u4E92\u8F6C\u6362\u3002"), /*#__PURE__*/React.createElement("textarea", {
+  }, "commonDdlIgnoreTables"), "\uFF08\u6240\u6709\u5E93\u751F\u6548\uFF09\u3002\u4E5F\u53EF\u7528\u4E0B\u65B9\u6309\u94AE\u4E0E\u8868\u5355\u76F8\u4E92\u8F6C\u6362\u3002"), React.createElement("textarea", {
     className: "rx-textarea",
     rows: 20,
     value: configJson,
     onChange: e => setConfigJson(e.target.value),
     placeholder: "{ \"sourceHost\": \"127.0.0.1\", ... }"
-  }), /*#__PURE__*/React.createElement("div", {
+  }), React.createElement("div", {
     className: "toolbar",
     style: {
       marginTop: 12
     }
-  }, /*#__PURE__*/React.createElement("button", {
+  }, React.createElement("button", {
     className: "rx-btn",
     onClick: formToJson
-  }, "\u2191 \u4ECE\u8868\u5355\u751F\u6210 JSON"), /*#__PURE__*/React.createElement("button", {
+  }, "\u2191 \u4ECE\u8868\u5355\u751F\u6210 JSON"), React.createElement("button", {
     className: "rx-btn",
     onClick: jsonToForm
-  }, "\u2193 \u5E94\u7528 JSON \u5230\u8868\u5355"), /*#__PURE__*/React.createElement("button", {
+  }, "\u2193 \u5E94\u7528 JSON \u5230\u8868\u5355"), React.createElement("button", {
     className: "rx-btn",
     onClick: formatJson
-  }, "\u683C\u5F0F\u5316 / \u6821\u9A8C"), /*#__PURE__*/React.createElement("button", {
+  }, "\u683C\u5F0F\u5316 / \u6821\u9A8C"), React.createElement("button", {
     className: "rx-btn rx-btn-primary",
     disabled: adding,
     onClick: saveAndSyncJson
-  }, "\u4FDD\u5B58\u5E76\u5F00\u59CB\u540C\u6B65\uFF08JSON\uFF09"), jsonError && /*#__PURE__*/React.createElement("span", {
+  }, "\u4FDD\u5B58\u5E76\u5F00\u59CB\u540C\u6B65\uFF08JSON\uFF09"), jsonError && React.createElement("span", {
     className: "rx-err"
-  }, "JSON \u9519\u8BEF\uFF1A", jsonError))), /*#__PURE__*/React.createElement("div", {
+  }, "JSON \u9519\u8BEF\uFF1A", jsonError))), React.createElement("div", {
     className: "card"
-  }, /*#__PURE__*/React.createElement("h3", null, "\u5DF2\u914D\u7F6E\u540C\u6B65\u4E3B\u673A\u5BF9"), /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("h3", null, "\u5DF2\u914D\u7F6E\u540C\u6B65\u4E3B\u673A\u5BF9"), React.createElement("div", {
     className: "rx-tablescroll"
-  }, /*#__PURE__*/React.createElement("table", {
+  }, React.createElement("table", {
     className: "rx-table"
-  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
+  }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {
     style: {
       width: 140
     }
-  }, "\u6E90\u4E3B\u673A"), /*#__PURE__*/React.createElement("th", {
+  }, "\u6E90\u4E3B\u673A"), React.createElement("th", {
     style: {
       width: 140
     }
-  }, "\u76EE\u6807\u4E3B\u673A"), /*#__PURE__*/React.createElement("th", {
+  }, "\u76EE\u6807\u4E3B\u673A"), React.createElement("th", {
     style: {
       width: 150
     }
-  }, "\u8D26\u53F7"), /*#__PURE__*/React.createElement("th", {
+  }, "\u8D26\u53F7"), React.createElement("th", {
     style: {
       width: 130
     }
-  }, "\u5FFD\u7565\u5E93"), /*#__PURE__*/React.createElement("th", null, "\u6309\u5E93\u5FFD\u7565(DML+DDL)"), /*#__PURE__*/React.createElement("th", null, "\u6309\u5E93\u5FFD\u7565(\u4EC5DDL)"), /*#__PURE__*/React.createElement("th", null, "\u901A\u7528\u5FFD\u7565(\u6240\u6709\u5E93)"), /*#__PURE__*/React.createElement("th", {
+  }, "\u5FFD\u7565\u5E93"), React.createElement("th", null, "\u6309\u5E93\u5FFD\u7565(DML+DDL)"), React.createElement("th", null, "\u6309\u5E93\u5FFD\u7565(\u4EC5DDL)"), React.createElement("th", null, "\u901A\u7528\u5FFD\u7565(\u6240\u6709\u5E93)"), React.createElement("th", {
     style: {
       width: 90
     }
-  }, "\u8F6C\u6362\u89C4\u5219"), /*#__PURE__*/React.createElement("th", {
+  }, "\u8F6C\u6362\u89C4\u5219"), React.createElement("th", {
     style: {
       width: 80
     }
-  }, "\u6765\u6E90"), /*#__PURE__*/React.createElement("th", {
+  }, "\u6765\u6E90"), React.createElement("th", {
     style: {
       width: 84
     }
-  }, "\u72B6\u6001"), /*#__PURE__*/React.createElement("th", {
+  }, "\u72B6\u6001"), React.createElement("th", {
     style: {
       width: 84
     }
-  }, "\u64CD\u4F5C"))), /*#__PURE__*/React.createElement("tbody", null, mappingsList.map((row, i) => /*#__PURE__*/React.createElement("tr", {
+  }, "\u64CD\u4F5C"))), React.createElement("tbody", null, mappingsList.map((row, i) => React.createElement("tr", {
     key: i
-  }, /*#__PURE__*/React.createElement("td", null, row.sourceHost), /*#__PURE__*/React.createElement("td", null, row.targetHost), /*#__PURE__*/React.createElement("td", null, row.sourceUser, " \u2192 ", row.targetUser), /*#__PURE__*/React.createElement("td", null, row.ignoreDatabases && row.ignoreDatabases.length ? row.ignoreDatabases.join(', ') : '—'), /*#__PURE__*/React.createElement("td", null, fmtDbIgnore(row.ignoreTablesByDb)), /*#__PURE__*/React.createElement("td", null, fmtDbIgnore(row.ignoreDdlTablesByDb)), /*#__PURE__*/React.createElement("td", null, row.commonIgnoreTables && row.commonIgnoreTables.length || row.commonDdlIgnoreTables && row.commonDdlIgnoreTables.length ? 'DML:' + ((row.commonIgnoreTables || []).join(',') || '—') + ' | DDL:' + ((row.commonDdlIgnoreTables || []).join(',') || '—') : '—'), /*#__PURE__*/React.createElement("td", null, row.transformRules && row.transformRules.length ? row.transformRules.length + ' 条' : '—'), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+  }, React.createElement("td", null, row.sourceHost), React.createElement("td", null, row.targetHost), React.createElement("td", null, row.sourceUser, " \u2192 ", row.targetUser), React.createElement("td", null, row.ignoreDatabases && row.ignoreDatabases.length ? row.ignoreDatabases.join(', ') : '—'), React.createElement("td", null, fmtDbIgnore(row.ignoreTablesByDb)), React.createElement("td", null, fmtDbIgnore(row.ignoreDdlTablesByDb)), React.createElement("td", null, row.commonIgnoreTables && row.commonIgnoreTables.length || row.commonDdlIgnoreTables && row.commonDdlIgnoreTables.length ? 'DML:' + ((row.commonIgnoreTables || []).join(',') || '—') + ' | DDL:' + ((row.commonDdlIgnoreTables || []).join(',') || '—') : '—'), React.createElement("td", null, row.transformRules && row.transformRules.length ? row.transformRules.length + ' 条' : '—'), React.createElement("td", null, React.createElement("span", {
     className: 'rx-tag-static ' + (row.source === 'dynamic' ? 'rx-warning' : 'rx-info')
-  }, row.source === 'dynamic' ? '页面' : '配置')), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+  }, row.source === 'dynamic' ? '页面' : '配置')), React.createElement("td", null, React.createElement("span", {
     className: 'rx-tag-static ' + (row.running ? 'rx-success' : 'rx-info')
-  }, row.running ? '运行中' : '已停止')), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("button", {
+  }, row.running ? '运行中' : '已停止')), React.createElement("td", null, React.createElement("button", {
     className: "rx-btn rx-btn-danger",
     disabled: row.source !== 'dynamic',
     onClick: () => removeMapping(row)
-  }, "\u79FB\u9664")))), mappingsList.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
+  }, "\u79FB\u9664")))), mappingsList.length === 0 && React.createElement("tr", null, React.createElement("td", {
     colSpan: 11,
     style: {
       textAlign: 'center',
       color: 'var(--text-3)'
     }
-  }, "\u6682\u65E0\u4E3B\u673A\u5BF9\u914D\u7F6E"))))), /*#__PURE__*/React.createElement("div", {
+  }, "\u6682\u65E0\u4E3B\u673A\u5BF9\u914D\u7F6E"))))), React.createElement("div", {
     className: "desc-cell"
-  }, "\u63D0\u793A\uFF1A\u4EC5\u9875\u9762\u52A8\u6001\u6DFB\u52A0\u7684\u4E3B\u673A\u5BF9\u53EF\u79FB\u9664\uFF1B\u914D\u7F6E\u6587\u4EF6\uFF08application.yml\uFF09\u4E2D\u7684\u4E3B\u673A\u5BF9\u9700\u624B\u52A8\u6539\u914D\u7F6E\u3002"))), activeTab === 'logs' && /*#__PURE__*/React.createElement("div", {
+  }, "\u63D0\u793A\uFF1A\u4EC5\u9875\u9762\u52A8\u6001\u6DFB\u52A0\u7684\u4E3B\u673A\u5BF9\u53EF\u79FB\u9664\uFF1B\u914D\u7F6E\u6587\u4EF6\uFF08application.yml\uFF09\u4E2D\u7684\u4E3B\u673A\u5BF9\u9700\u624B\u52A8\u6539\u914D\u7F6E\u3002"))), activeTab === 'logs' && React.createElement("div", {
     className: "card"
-  }, /*#__PURE__*/React.createElement("h3", null, "\u64CD\u4F5C\u5BA1\u8BA1\u65E5\u5FD7"), /*#__PURE__*/React.createElement("div", {
-    className: "filter-bar",
+  }, React.createElement("h3", null, "\u64CD\u4F5C\u5BA1\u8BA1\u65E5\u5FD7"), React.createElement("div", {
+    className: "filter-bar log-filter",
     style: {
       display: 'flex',
       gap: 12,
       flexWrap: 'wrap',
-      alignItems: 'flex-end',
+      alignItems: 'center',
       marginBottom: 16
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
     className: "rx-field",
     style: {
       minWidth: 120
     }
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u7528\u6237\u540D"), /*#__PURE__*/React.createElement("input", {
-    className: "rx-input",
-    style: {
-      border: '1px solid rgba(255,255,255,0.16)',
-      borderRadius: 4,
-      padding: '6px 10px',
-      width: '100%',
-      boxSizing: 'border-box'
-    },
+  }, "\u7528\u6237\u540D"), React.createElement("input", {
+    className: "rx-control",
     value: logFilter.username,
     placeholder: "\u7CBE\u786E\u5339\u914D",
     onChange: e => setLogFilter(f => ({
       ...f,
       username: e.target.value
     }))
-  })), /*#__PURE__*/React.createElement("div", {
+  })), React.createElement("div", {
     className: "rx-field",
     style: {
       minWidth: 120
     }
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u5BA2\u6237\u7AEF IP"), /*#__PURE__*/React.createElement("input", {
-    className: "rx-input",
-    style: {
-      border: '1px solid rgba(255,255,255,0.16)',
-      borderRadius: 4,
-      padding: '6px 10px',
-      width: '100%',
-      boxSizing: 'border-box'
-    },
+  }, "\u5BA2\u6237\u7AEF IP"), React.createElement("input", {
+    className: "rx-control",
     value: logFilter.clientIp,
     placeholder: "\u6A21\u7CCA\u5339\u914D",
     onChange: e => setLogFilter(f => ({
       ...f,
       clientIp: e.target.value
     }))
-  })), /*#__PURE__*/React.createElement("div", {
+  })), React.createElement("div", {
     className: "rx-field",
     style: {
       minWidth: 140
     }
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u64CD\u4F5C\u7C7B\u578B"), /*#__PURE__*/React.createElement("select", {
-    className: "rx-input",
-    style: {
-      border: '1px solid rgba(255,255,255,0.16)',
-      borderRadius: 4,
-      padding: '6px 10px',
-      width: '100%',
-      boxSizing: 'border-box'
-    },
+  }, "\u64CD\u4F5C\u7C7B\u578B"), React.createElement(Select, {
     value: logFilter.operationType,
-    onChange: e => setLogFilter(f => ({
+    options: logTypes,
+    filterable: false,
+    placeholder: "\u5168\u90E8",
+    onChange: v => setLogFilter(f => ({
       ...f,
-      operationType: e.target.value
+      operationType: v
     }))
-  }, /*#__PURE__*/React.createElement("option", {
-    value: ""
-  }, "\u5168\u90E8"), logTypes.map(t => /*#__PURE__*/React.createElement("option", {
-    key: t,
-    value: t
-  }, t)))), /*#__PURE__*/React.createElement("div", {
+  })), React.createElement("div", {
     className: "rx-field",
     style: {
       minWidth: 100
     }
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u7ED3\u679C"), /*#__PURE__*/React.createElement("select", {
-    className: "rx-input",
-    style: {
-      border: '1px solid rgba(255,255,255,0.16)',
-      borderRadius: 4,
-      padding: '6px 10px',
-      width: '100%',
-      boxSizing: 'border-box'
-    },
+  }, "\u7ED3\u679C"), React.createElement(Select, {
     value: logFilter.resultStatus,
-    onChange: e => setLogFilter(f => ({
+    options: ['SUCCESS', 'FAILURE'],
+    filterable: false,
+    placeholder: "\u5168\u90E8",
+    onChange: v => setLogFilter(f => ({
       ...f,
-      resultStatus: e.target.value
+      resultStatus: v
     }))
-  }, /*#__PURE__*/React.createElement("option", {
-    value: ""
-  }, "\u5168\u90E8"), /*#__PURE__*/React.createElement("option", {
-    value: "SUCCESS"
-  }, "\u6210\u529F"), /*#__PURE__*/React.createElement("option", {
-    value: "FAILURE"
-  }, "\u5931\u8D25"))), /*#__PURE__*/React.createElement("div", {
+  })), React.createElement("div", {
     className: "rx-field",
     style: {
-      minWidth: 150
+      minWidth: 200
     }
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u5F00\u59CB\u65F6\u95F4"), /*#__PURE__*/React.createElement("input", {
-    type: "datetime-local",
-    className: "rx-input",
-    style: {
-      border: '1px solid rgba(255,255,255,0.16)',
-      borderRadius: 4,
-      padding: '6px 10px',
-      width: '100%',
-      boxSizing: 'border-box',
-      colorScheme: 'dark'
-    },
-    value: toDtl(logFilter.startTime),
-    onChange: e => setLogFilter(f => ({
+  }, "\u5F00\u59CB\u65F6\u95F4"), React.createElement(DateTimePicker, {
+    value: logFilter.startTime,
+    placeholder: "\u8D77\u59CB\u65F6\u95F4",
+    onChange: v => setLogFilter(f => ({
       ...f,
-      startTime: fromDtl(e.target.value)
+      startTime: v
     }))
-  })), /*#__PURE__*/React.createElement("div", {
+  })), React.createElement("div", {
     className: "rx-field",
     style: {
-      minWidth: 150
+      minWidth: 200
     }
-  }, /*#__PURE__*/React.createElement("label", {
+  }, React.createElement("label", {
     className: "rx-label"
-  }, "\u7ED3\u675F\u65F6\u95F4"), /*#__PURE__*/React.createElement("input", {
-    type: "datetime-local",
-    className: "rx-input",
-    style: {
-      border: '1px solid rgba(255,255,255,0.16)',
-      borderRadius: 4,
-      padding: '6px 10px',
-      width: '100%',
-      boxSizing: 'border-box',
-      colorScheme: 'dark'
-    },
-    value: toDtl(logFilter.endTime),
-    onChange: e => setLogFilter(f => ({
+  }, "\u7ED3\u675F\u65F6\u95F4"), React.createElement(DateTimePicker, {
+    value: logFilter.endTime,
+    placeholder: "\u7ED3\u675F\u65F6\u95F4",
+    onChange: v => setLogFilter(f => ({
       ...f,
-      endTime: fromDtl(e.target.value)
+      endTime: v
     }))
-  })), /*#__PURE__*/React.createElement("div", {
+  })), React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8
     }
-  }, /*#__PURE__*/React.createElement("button", {
+  }, React.createElement("button", {
     className: "rx-btn rx-btn-primary",
     onClick: searchLogs
-  }, "\u67E5\u8BE2"), /*#__PURE__*/React.createElement("button", {
+  }, "\u67E5\u8BE2"), React.createElement("button", {
     className: "rx-btn",
     onClick: resetLogFilter
-  }, "\u91CD\u7F6E"))), /*#__PURE__*/React.createElement("div", {
+  }, "\u91CD\u7F6E"))), React.createElement("div", {
     className: "rx-tablescroll"
-  }, /*#__PURE__*/React.createElement("table", {
+  }, React.createElement("table", {
     className: "rx-table"
-  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
+  }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {
     style: {
       width: 60
     }
-  }, "ID"), /*#__PURE__*/React.createElement("th", {
+  }, "ID"), React.createElement("th", {
     style: {
       width: 100
     }
-  }, "\u7528\u6237\u540D"), /*#__PURE__*/React.createElement("th", {
+  }, "\u7528\u6237\u540D"), React.createElement("th", {
     style: {
       width: 120
     }
-  }, "\u5BA2\u6237\u7AEF IP"), /*#__PURE__*/React.createElement("th", {
+  }, "\u5BA2\u6237\u7AEF IP"), React.createElement("th", {
     style: {
       width: 140
     }
-  }, "\u64CD\u4F5C\u7C7B\u578B"), /*#__PURE__*/React.createElement("th", null, "\u64CD\u4F5C\u63CF\u8FF0"), /*#__PURE__*/React.createElement("th", {
+  }, "\u64CD\u4F5C\u7C7B\u578B"), React.createElement("th", null, "\u64CD\u4F5C\u63CF\u8FF0"), React.createElement("th", {
     style: {
       width: 80
     }
-  }, "\u7ED3\u679C"), /*#__PURE__*/React.createElement("th", {
+  }, "\u7ED3\u679C"), React.createElement("th", {
     style: {
       width: 80
     }
-  }, "\u8017\u65F6(ms)"), /*#__PURE__*/React.createElement("th", {
+  }, "\u8017\u65F6(ms)"), React.createElement("th", {
     style: {
       width: 160
     }
-  }, "\u64CD\u4F5C\u65F6\u95F4"), /*#__PURE__*/React.createElement("th", {
+  }, "\u64CD\u4F5C\u65F6\u95F4"), React.createElement("th", {
     style: {
       width: 60
     }
-  }, "\u8BE6\u60C5"))), /*#__PURE__*/React.createElement("tbody", null, logs.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
+  }, "\u8BE6\u60C5"))), React.createElement("tbody", null, logs.length === 0 && React.createElement("tr", null, React.createElement("td", {
     colSpan: 9,
     style: {
       textAlign: 'center',
       padding: 24,
       color: 'var(--text-3)'
     }
-  }, "\u6682\u65E0\u65E5\u5FD7\u8BB0\u5F55")), logs.map(row => /*#__PURE__*/React.createElement("tr", {
+  }, "\u6682\u65E0\u65E5\u5FD7\u8BB0\u5F55")), logs.map(row => React.createElement("tr", {
     key: row.id
-  }, /*#__PURE__*/React.createElement("td", {
+  }, React.createElement("td", {
     style: {
       fontFamily: 'monospace'
     }
-  }, row.id), /*#__PURE__*/React.createElement("td", null, row.username || '—'), /*#__PURE__*/React.createElement("td", {
+  }, row.id), React.createElement("td", null, row.username || '—'), React.createElement("td", {
     style: {
       fontFamily: 'monospace'
     }
-  }, row.clientIp || '—'), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+  }, row.clientIp || '—'), React.createElement("td", null, React.createElement("span", {
     style: {
       fontFamily: 'monospace',
       fontSize: 12,
@@ -2437,7 +2545,7 @@ function App() {
       padding: '2px 6px',
       borderRadius: 3
     }
-  }, row.operationType)), /*#__PURE__*/React.createElement("td", {
+  }, row.operationType)), React.createElement("td", {
     style: {
       maxWidth: 300,
       overflow: 'hidden',
@@ -2445,89 +2553,89 @@ function App() {
       whiteSpace: 'nowrap'
     },
     title: row.operationDesc
-  }, row.operationDesc || '—'), /*#__PURE__*/React.createElement("td", null, row.resultStatus === 'SUCCESS' ? /*#__PURE__*/React.createElement("span", {
+  }, row.operationDesc || '—'), React.createElement("td", null, row.resultStatus === 'SUCCESS' ? React.createElement("span", {
     style: {
       color: 'var(--accent)'
     }
-  }, "\u6210\u529F") : /*#__PURE__*/React.createElement("span", {
+  }, "\u6210\u529F") : React.createElement("span", {
     style: {
       color: 'var(--danger)'
     }
-  }, "\u5931\u8D25")), /*#__PURE__*/React.createElement("td", {
+  }, "\u5931\u8D25")), React.createElement("td", {
     style: {
       fontFamily: 'monospace',
       fontVariantNumeric: 'tabular-nums'
     }
-  }, row.durationMs == null ? '—' : row.durationMs), /*#__PURE__*/React.createElement("td", {
+  }, row.durationMs == null ? '—' : row.durationMs), React.createElement("td", {
     style: {
       fontFamily: 'monospace',
       fontSize: 12
     }
-  }, row.createTime), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+  }, row.createTime), React.createElement("td", null, React.createElement("span", {
     className: "rx-link",
     onClick: () => setLogDetail(row)
-  }, "\u67E5\u770B"))))))), /*#__PURE__*/React.createElement("div", {
+  }, "\u67E5\u770B"))))))), React.createElement("div", {
     style: {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
       marginTop: 12
     }
-  }, /*#__PURE__*/React.createElement("span", {
+  }, React.createElement("span", {
     style: {
       color: 'var(--text-2)',
       fontSize: 13
     }
-  }, "\u5171 ", logsTotal, " \u6761"), /*#__PURE__*/React.createElement("div", {
+  }, "\u5171 ", logsTotal, " \u6761"), React.createElement("div", {
     style: {
       display: 'flex',
       gap: 8,
       alignItems: 'center'
     }
-  }, /*#__PURE__*/React.createElement("button", {
+  }, React.createElement("button", {
     className: "rx-btn",
     disabled: logsPage <= 1,
     onClick: () => onLogsPage(logsPage - 1)
-  }, "\u4E0A\u4E00\u9875"), /*#__PURE__*/React.createElement("span", {
+  }, "\u4E0A\u4E00\u9875"), React.createElement("span", {
     style: {
       fontFamily: 'monospace',
       fontSize: 13
     }
-  }, logsPage, " / ", Math.max(1, Math.ceil(logsTotal / logsPageSize))), /*#__PURE__*/React.createElement("button", {
+  }, logsPage, " / ", Math.max(1, Math.ceil(logsTotal / logsPageSize))), React.createElement("button", {
     className: "rx-btn",
     disabled: logsPage >= Math.ceil(logsTotal / logsPageSize),
     onClick: () => onLogsPage(logsPage + 1)
-  }, "\u4E0B\u4E00\u9875")))), /*#__PURE__*/React.createElement("div", {
+  }, "\u4E0B\u4E00\u9875")))), React.createElement("div", {
     className: "footer"
-  }, "DRPlatform \xB7 \u672C\u5730\u5185\u5D4C\u540C\u6B65\u5F15\u64CE\u6F14\u793A \xB7 \u4E3B\u673A\u5BF9\u81EA\u52A8\u540C\u6B65 + \u5FFD\u7565\u5F0F\u914D\u7F6E + \u5B9E\u65F6\u65B0\u5E93\u65B0\u8868\u76D1\u6D4B")), /*#__PURE__*/React.createElement(Drawer, {
+  }, "DRPlatform \xB7 \u672C\u5730\u5185\u5D4C\u540C\u6B65\u5F15\u64CE\u6F14\u793A \xB7 \u4E3B\u673A\u5BF9\u81EA\u52A8\u540C\u6B65 + \u5FFD\u7565\u5F0F\u914D\u7F6E + \u5B9E\u65F6\u65B0\u5E93\u65B0\u8868\u76D1\u6D4B")), React.createElement(Drawer, {
     open: drawer,
     title: "\u540C\u6B65\u8BE6\u60C5",
     onClose: () => setDrawer(false)
-  }, current && /*#__PURE__*/React.createElement("div", {
+  }, current && React.createElement("div", {
     className: "rx-tablescroll"
-  }, /*#__PURE__*/React.createElement("table", {
+  }, React.createElement("table", {
     className: "rx-dlist"
-  }, /*#__PURE__*/React.createElement("tbody", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "ID"), /*#__PURE__*/React.createElement("td", null, current.id)), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u6E90IP"), /*#__PURE__*/React.createElement("td", null, current.sourceIp)), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u6E90\u5E93"), /*#__PURE__*/React.createElement("td", null, current.sourceDbName)), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u76EE\u6807IP"), /*#__PURE__*/React.createElement("td", null, current.targetIp)), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u76EE\u6807\u5E93"), /*#__PURE__*/React.createElement("td", null, current.targetDbName)), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u72B6\u6001"), /*#__PURE__*/React.createElement("td", null, stateDesc(current.state))), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u504F\u5DEE\u72B6\u6001"), /*#__PURE__*/React.createElement("td", null, current.deviationStatus === 1 ? '正常' : current.deviationStatus === 2 ? '异常' : '—')), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u504F\u5DEE\u6B21\u6570"), /*#__PURE__*/React.createElement("td", null, current.deviationTimes)), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u6E90Binlog"), /*#__PURE__*/React.createElement("td", null, current.sourceBinlogFile, " @ ", current.sourceBinlogTime)), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u5DF2\u540C\u6B65Binlog"), /*#__PURE__*/React.createElement("td", null, current.syncBinlogFile, " @ ", current.syncBinlogTime)), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u4E2D\u6B62\u539F\u56E0"), /*#__PURE__*/React.createElement("td", null, current.suspensionReason || '—')), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u5904\u7406\u4FE1\u606F"), /*#__PURE__*/React.createElement("td", null, current.processingMethod || '—')), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u66F4\u65B0\u65F6\u95F4"), /*#__PURE__*/React.createElement("td", null, current.updateTime)))))), /*#__PURE__*/React.createElement(Drawer, {
+  }, React.createElement("tbody", null, React.createElement("tr", null, React.createElement("th", null, "ID"), React.createElement("td", null, current.id)), React.createElement("tr", null, React.createElement("th", null, "\u6E90IP"), React.createElement("td", null, current.sourceIp)), React.createElement("tr", null, React.createElement("th", null, "\u6E90\u5E93"), React.createElement("td", null, current.sourceDbName)), React.createElement("tr", null, React.createElement("th", null, "\u76EE\u6807IP"), React.createElement("td", null, current.targetIp)), React.createElement("tr", null, React.createElement("th", null, "\u76EE\u6807\u5E93"), React.createElement("td", null, current.targetDbName)), React.createElement("tr", null, React.createElement("th", null, "\u72B6\u6001"), React.createElement("td", null, stateDesc(current.state))), React.createElement("tr", null, React.createElement("th", null, "\u504F\u5DEE\u72B6\u6001"), React.createElement("td", null, current.deviationStatus === 1 ? '正常' : current.deviationStatus === 2 ? '异常' : '—')), React.createElement("tr", null, React.createElement("th", null, "\u504F\u5DEE\u6B21\u6570"), React.createElement("td", null, current.deviationTimes)), React.createElement("tr", null, React.createElement("th", null, "\u6E90Binlog"), React.createElement("td", null, current.sourceBinlogFile, " @ ", current.sourceBinlogTime)), React.createElement("tr", null, React.createElement("th", null, "\u5DF2\u540C\u6B65Binlog"), React.createElement("td", null, current.syncBinlogFile, " @ ", current.syncBinlogTime)), React.createElement("tr", null, React.createElement("th", null, "\u4E2D\u6B62\u539F\u56E0"), React.createElement("td", null, current.suspensionReason || '—')), React.createElement("tr", null, React.createElement("th", null, "\u5904\u7406\u4FE1\u606F"), React.createElement("td", null, current.processingMethod || '—')), React.createElement("tr", null, React.createElement("th", null, "\u66F4\u65B0\u65F6\u95F4"), React.createElement("td", null, current.updateTime)))))), React.createElement(Drawer, {
     open: !!logDetail,
     title: "\u65E5\u5FD7\u8BE6\u60C5",
     onClose: () => setLogDetail(null)
-  }, logDetail && /*#__PURE__*/React.createElement("div", {
+  }, logDetail && React.createElement("div", {
     className: "rx-tablescroll"
-  }, /*#__PURE__*/React.createElement("table", {
+  }, React.createElement("table", {
     className: "rx-dlist"
-  }, /*#__PURE__*/React.createElement("tbody", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "ID"), /*#__PURE__*/React.createElement("td", {
+  }, React.createElement("tbody", null, React.createElement("tr", null, React.createElement("th", null, "ID"), React.createElement("td", {
     style: {
       fontFamily: 'monospace'
     }
-  }, logDetail.id)), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u7528\u6237\u540D"), /*#__PURE__*/React.createElement("td", null, logDetail.username || '—')), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u7528\u6237 ID"), /*#__PURE__*/React.createElement("td", {
+  }, logDetail.id)), React.createElement("tr", null, React.createElement("th", null, "\u7528\u6237\u540D"), React.createElement("td", null, logDetail.username || '—')), React.createElement("tr", null, React.createElement("th", null, "\u7528\u6237 ID"), React.createElement("td", {
     style: {
       fontFamily: 'monospace'
     }
-  }, logDetail.userId || '—')), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u5BA2\u6237\u7AEF IP"), /*#__PURE__*/React.createElement("td", {
+  }, logDetail.userId || '—')), React.createElement("tr", null, React.createElement("th", null, "\u5BA2\u6237\u7AEF IP"), React.createElement("td", {
     style: {
       fontFamily: 'monospace'
     }
-  }, logDetail.clientIp || '—')), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u64CD\u4F5C\u7C7B\u578B"), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+  }, logDetail.clientIp || '—')), React.createElement("tr", null, React.createElement("th", null, "\u64CD\u4F5C\u7C7B\u578B"), React.createElement("td", null, React.createElement("span", {
     style: {
       fontFamily: 'monospace',
       fontSize: 12,
@@ -2535,17 +2643,17 @@ function App() {
       padding: '2px 6px',
       borderRadius: 3
     }
-  }, logDetail.operationType))), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u64CD\u4F5C\u63CF\u8FF0"), /*#__PURE__*/React.createElement("td", null, logDetail.operationDesc || '—')), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u76EE\u6807\u8D44\u6E90"), /*#__PURE__*/React.createElement("td", null, logDetail.targetResource || '—')), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u8BF7\u6C42\u65B9\u6CD5"), /*#__PURE__*/React.createElement("td", {
+  }, logDetail.operationType))), React.createElement("tr", null, React.createElement("th", null, "\u64CD\u4F5C\u63CF\u8FF0"), React.createElement("td", null, logDetail.operationDesc || '—')), React.createElement("tr", null, React.createElement("th", null, "\u76EE\u6807\u8D44\u6E90"), React.createElement("td", null, logDetail.targetResource || '—')), React.createElement("tr", null, React.createElement("th", null, "\u8BF7\u6C42\u65B9\u6CD5"), React.createElement("td", {
     style: {
       fontFamily: 'monospace'
     }
-  }, logDetail.requestMethod || '—')), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u8BF7\u6C42 URL"), /*#__PURE__*/React.createElement("td", {
+  }, logDetail.requestMethod || '—')), React.createElement("tr", null, React.createElement("th", null, "\u8BF7\u6C42 URL"), React.createElement("td", {
     style: {
       fontFamily: 'monospace',
       fontSize: 12,
       wordBreak: 'break-all'
     }
-  }, logDetail.requestUrl || '—')), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u8BF7\u6C42\u53C2\u6570"), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("pre", {
+  }, logDetail.requestUrl || '—')), React.createElement("tr", null, React.createElement("th", null, "\u8BF7\u6C42\u53C2\u6570"), React.createElement("td", null, React.createElement("pre", {
     style: {
       margin: 0,
       maxHeight: 200,
@@ -2558,29 +2666,29 @@ function App() {
       whiteSpace: 'pre-wrap',
       wordBreak: 'break-all'
     }
-  }, logDetail.requestParams || '—'))), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u6267\u884C\u7ED3\u679C"), /*#__PURE__*/React.createElement("td", null, logDetail.resultStatus === 'SUCCESS' ? /*#__PURE__*/React.createElement("span", {
+  }, logDetail.requestParams || '—'))), React.createElement("tr", null, React.createElement("th", null, "\u6267\u884C\u7ED3\u679C"), React.createElement("td", null, logDetail.resultStatus === 'SUCCESS' ? React.createElement("span", {
     style: {
       color: 'var(--accent)'
     }
-  }, "\u6210\u529F") : /*#__PURE__*/React.createElement("span", {
+  }, "\u6210\u529F") : React.createElement("span", {
     style: {
       color: 'var(--danger)'
     }
-  }, "\u5931\u8D25"))), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u9519\u8BEF\u4FE1\u606F"), /*#__PURE__*/React.createElement("td", {
+  }, "\u5931\u8D25"))), React.createElement("tr", null, React.createElement("th", null, "\u9519\u8BEF\u4FE1\u606F"), React.createElement("td", {
     style: {
       color: 'var(--danger)',
       fontSize: 12,
       wordBreak: 'break-all'
     }
-  }, logDetail.errorMsg || '—')), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u8017\u65F6"), /*#__PURE__*/React.createElement("td", {
+  }, logDetail.errorMsg || '—')), React.createElement("tr", null, React.createElement("th", null, "\u8017\u65F6"), React.createElement("td", {
     style: {
       fontFamily: 'monospace',
       fontVariantNumeric: 'tabular-nums'
     }
-  }, logDetail.durationMs != null ? logDetail.durationMs + ' ms' : '—')), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "\u64CD\u4F5C\u65F6\u95F4"), /*#__PURE__*/React.createElement("td", {
+  }, logDetail.durationMs != null ? logDetail.durationMs + ' ms' : '—')), React.createElement("tr", null, React.createElement("th", null, "\u64CD\u4F5C\u65F6\u95F4"), React.createElement("td", {
     style: {
       fontFamily: 'monospace'
     }
-  }, logDetail.createTime)))))), /*#__PURE__*/React.createElement(ToastHost, null));
+  }, logDetail.createTime)))))), React.createElement(ToastHost, null));
 }
-ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(App, null));
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App, null));

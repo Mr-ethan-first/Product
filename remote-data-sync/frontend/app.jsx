@@ -23,19 +23,21 @@ function ToastHost() {
   );
 }
 
-/* ============ 多选/可新建 Select ============ */
+/* ============ 多选/可新建 Select（支持字符串 或 {value,label} 选项） ============ */
 function Select({ value, options = [], multiple = false, allowCreate = false, filterable = true, placeholder = '', loading = false, disabled = false, onChange, style }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const boxRef = useRef(null);
+  const norm = (o) => (o && typeof o === 'object' ? { value: o.value, label: o.label != null ? String(o.label) : String(o.value) } : { value: o, label: String(o) });
+  const normList = (options || []).map(norm);
   const vals = multiple ? (value || []) : (value ? [value] : []);
   useEffect(() => {
     const h = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, []);
-  const filtered = (options || []).filter(o => String(o || '').toLowerCase().includes(String(text || '').toLowerCase()));
-  const showCreate = allowCreate && !!text && !options.includes(text) && !vals.includes(text);
+  const filtered = normList.filter(o => String(o.label || '').toLowerCase().includes(String(text || '').toLowerCase()) || String(o.value || '').toLowerCase().includes(String(text || '').toLowerCase()));
+  const showCreate = allowCreate && !!text && !normList.some(o => o.value === text || o.label === text) && !vals.includes(text);
   const toggle = (v) => {
     if (multiple) {
       const next = vals.includes(v) ? vals.filter(x => x !== v) : [...vals, v];
@@ -51,19 +53,23 @@ function Select({ value, options = [], multiple = false, allowCreate = false, fi
     <div ref={boxRef} className={'rx-select' + (disabled ? ' rx-disabled' : '')} style={style}>
       <div className="rx-select-box" onClick={() => { if (!disabled) setOpen(o => !o); }}>
         {vals.length === 0 && !open && <span className="rx-ph">{placeholder}</span>}
-        {vals.map(v => (
-          <span key={v} className="rx-tag">
-            {v}
-            {multiple && <span className="rx-x" onClick={(e) => { e.stopPropagation(); toggle(v); }}>×</span>}
-          </span>
-        ))}
+        {vals.map(v => {
+          const it = normList.find(x => x.value === v);
+          return (
+            <span key={v} className="rx-tag">
+              {it ? it.label : v}
+              {multiple && <span className="rx-x" onClick={(e) => { e.stopPropagation(); toggle(v); }}>×</span>}
+              {!multiple && <span className="rx-x" onClick={(e) => { e.stopPropagation(); onChange(''); }}>×</span>}
+            </span>
+          );
+        })}
         {open && filterable && (
           <input className="rx-input" autoFocus value={text}
             placeholder={placeholder}
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') { if (showCreate) create(); else if (filtered[0]) toggle(filtered[0]); }
+              if (e.key === 'Enter') { if (showCreate) create(); else if (filtered[0]) toggle(filtered[0].value); }
               if (e.key === 'Backspace' && !text && multiple && vals.length) onChange(vals.slice(0, -1));
             }} />
         )}
@@ -72,10 +78,85 @@ function Select({ value, options = [], multiple = false, allowCreate = false, fi
         <div className="rx-dropdown">
           {loading && <div className="rx-loading">加载中...</div>}
           {filtered.map(o => (
-            <div key={o} className={'rx-opt' + (vals.includes(o) ? ' rx-sel' : '')} onClick={() => toggle(o)}>{o}</div>
+            <div key={o.value} className={'rx-opt' + (vals.includes(o.value) ? ' rx-sel' : '')} onClick={() => toggle(o.value)}>{o.label}</div>
           ))}
           {showCreate && <div className="rx-opt rx-create" onClick={create}>创建: “{text}”</div>}
           {!loading && filtered.length === 0 && !showCreate && <div className="rx-empty">无匹配</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============ 日期时间选择器（自研玻璃日历，替代原生 datetime-local） ============ */
+function DateTimePicker({ value, onChange, placeholder = '选择日期时间', disabled = false, style }) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const ref = useRef(null);
+  const [open, setOpen] = useState(false);
+  const parse = (s) => {
+    if (!s) return null;
+    const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{1,2})/);
+    if (!m) return null;
+    return { y: +m[1], mo: +m[2] - 1, d: +m[3], h: +m[4], mi: +m[5] };
+  };
+  const now = new Date();
+  const init = parse(value) || { y: now.getFullYear(), mo: now.getMonth(), d: now.getDate(), h: now.getHours(), mi: now.getMinutes() };
+  const [sel, setSel] = useState(init);
+  const [view, setView] = useState({ y: init.y, mo: init.mo });
+  useEffect(() => { const p = parse(value); if (p) { setSel(p); setView({ y: p.y, mo: p.mo }); } }, [value]);
+  useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+  const firstDay = new Date(view.y, view.mo, 1).getDay();
+  const days = new Date(view.y, view.mo + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= days; d++) cells.push(d);
+  const isSame = (d) => sel.y === view.y && sel.mo === view.mo && sel.d === d;
+  const isToday = (d) => { const n = new Date(); return n.getFullYear() === view.y && n.getMonth() === view.mo && n.getDate() === d; };
+  const move = (delta) => { let mo = view.mo + delta, y = view.y; if (mo < 0) { mo = 11; y--; } if (mo > 11) { mo = 0; y++; } setView({ y, mo }); };
+  const pickDay = (d) => setSel((s) => ({ ...s, d }));
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, isNaN(v) ? lo : v));
+  const confirm = () => { onChange(`${sel.y}-${pad(sel.mo + 1)}-${pad(sel.d)} ${pad(sel.h)}:${pad(sel.mi)}:00`); setOpen(false); };
+  return (
+    <div ref={ref} className={'rx-dtpicker' + (disabled ? ' rx-disabled' : '')} style={style}>
+      <div className="rx-dtpicker-box" onClick={() => { if (!disabled) setOpen((o) => !o); }}>
+        {value ? <span className="rx-dtp-value">{String(value).replace(':00', '')}</span> : <span className="rx-ph">{placeholder}</span>}
+        <span className="rx-cal-ico" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="17" rx="2" />
+            <path d="M3 9h18M8 2v4M16 2v4" />
+          </svg>
+        </span>
+      </div>
+      {open && (
+        <div className="rx-cal">
+          <div className="rx-cal-head">
+            <button type="button" className="rx-cal-nav" onClick={() => move(-1)}>&lsaquo;</button>
+            <span className="rx-cal-title">{view.y} 年 {view.mo + 1} 月</span>
+            <button type="button" className="rx-cal-nav" onClick={() => move(1)}>&rsaquo;</button>
+          </div>
+          <div className="rx-cal-week">{weekDays.map((w) => <span key={w}>{w}</span>)}</div>
+          <div className="rx-cal-grid">
+            {cells.map((d, i) => d === null
+              ? <span key={i} className="rx-cal-cell empty" />
+              : <button type="button" key={i} className={'rx-cal-cell' + (isSame(d) ? ' sel' : '') + (isToday(d) ? ' today' : '')} onClick={() => pickDay(d)}>{d}</button>)}
+          </div>
+          <div className="rx-cal-time">
+            <span className="rx-cal-time-lbl">时间</span>
+            <input type="number" className="rx-cal-num" min="0" max="23" value={sel.h}
+              onChange={(e) => setSel((s) => ({ ...s, h: clamp(+e.target.value, 0, 23) }))} />
+            <span className="rx-cal-colon">:</span>
+            <input type="number" className="rx-cal-num" min="0" max="59" value={sel.mi}
+              onChange={(e) => setSel((s) => ({ ...s, mi: clamp(+e.target.value, 0, 59) }))} />
+          </div>
+          <div className="rx-cal-foot">
+            <button type="button" className="rx-btn" onClick={() => setOpen(false)}>取消</button>
+            <button type="button" className="rx-btn rx-btn-primary" onClick={confirm}>确定</button>
+          </div>
         </div>
       )}
     </div>
@@ -800,16 +881,22 @@ function App() {
 
             <div className="card">
               <h3>同步进度列表</h3>
-              <div className="toolbar">
-                <input className="rx-input" style={{ width: 150, border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px' }} value={query.ip} onChange={e => setQuery(q => ({ ...q, ip: e.target.value }))} placeholder="源IP筛选" />
-                <input className="rx-input" style={{ width: 160, border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px' }} value={query.sourceDbName} onChange={e => setQuery(q => ({ ...q, sourceDbName: e.target.value }))} placeholder="源库名(模糊)" />
-                <select style={{ width: 130, border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 8px' }} value={query.state == null ? '' : query.state} onChange={e => setQuery(q => ({ ...q, state: e.target.value === '' ? null : Number(e.target.value) }))}>
-                  <option value="">状态</option>
-                  <option value="0">失效</option>
-                  <option value="1">全量同步</option>
-                  <option value="2">同步中</option>
-                  <option value="3">中止</option>
-                </select>
+              <div className="toolbar stats-filter">
+                <input className="rx-control" style={{ width: 150 }} value={query.ip} onChange={e => setQuery(q => ({ ...q, ip: e.target.value }))} placeholder="源IP筛选" />
+                <input className="rx-control" style={{ width: 160 }} value={query.sourceDbName} onChange={e => setQuery(q => ({ ...q, sourceDbName: e.target.value }))} placeholder="源库名(模糊)" />
+                <Select
+                  style={{ width: 130 }}
+                  value={query.state == null ? '' : String(query.state)}
+                  options={[
+                    { value: '0', label: '失效' },
+                    { value: '1', label: '全量同步' },
+                    { value: '2', label: '同步中' },
+                    { value: '3', label: '中止' },
+                  ]}
+                  filterable={false}
+                  placeholder="状态"
+                  onChange={(v) => setQuery(q => ({ ...q, state: v === '' ? null : Number(v) }))}
+                />
                 <button className="rx-btn rx-btn-primary" onClick={search}>查询</button>
                 <button className="rx-btn" onClick={resetQuery}>重置</button>
                 <button className="rx-btn rx-btn-success" disabled={!selectedRows.length} onClick={resync}>重新同步选中({selectedRows.length})</button>
@@ -953,49 +1040,38 @@ function App() {
         {activeTab === 'logs' && (
           <div className="card">
             <h3>操作审计日志</h3>
-            <div className="filter-bar" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 16 }}>
+            <div className="filter-bar log-filter" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
               <div className="rx-field" style={{ minWidth: 120 }}>
                 <label className="rx-label">用户名</label>
-                <input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
+                <input className="rx-control"
                   value={logFilter.username} placeholder="精确匹配"
                   onChange={e => setLogFilter(f => ({ ...f, username: e.target.value }))} />
               </div>
               <div className="rx-field" style={{ minWidth: 120 }}>
                 <label className="rx-label">客户端 IP</label>
-                <input className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
+                <input className="rx-control"
                   value={logFilter.clientIp} placeholder="模糊匹配"
                   onChange={e => setLogFilter(f => ({ ...f, clientIp: e.target.value }))} />
               </div>
               <div className="rx-field" style={{ minWidth: 140 }}>
                 <label className="rx-label">操作类型</label>
-                <select className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
-                  value={logFilter.operationType}
-                  onChange={e => setLogFilter(f => ({ ...f, operationType: e.target.value }))}>
-                  <option value="">全部</option>
-                  {logTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+                <Select value={logFilter.operationType} options={logTypes} filterable={false} placeholder="全部"
+                  onChange={v => setLogFilter(f => ({ ...f, operationType: v }))} />
               </div>
               <div className="rx-field" style={{ minWidth: 100 }}>
                 <label className="rx-label">结果</label>
-                <select className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
-                  value={logFilter.resultStatus}
-                  onChange={e => setLogFilter(f => ({ ...f, resultStatus: e.target.value }))}>
-                  <option value="">全部</option>
-                  <option value="SUCCESS">成功</option>
-                  <option value="FAILURE">失败</option>
-                </select>
+                <Select value={logFilter.resultStatus} options={['SUCCESS', 'FAILURE']} filterable={false} placeholder="全部"
+                  onChange={v => setLogFilter(f => ({ ...f, resultStatus: v }))} />
               </div>
-              <div className="rx-field" style={{ minWidth: 150 }}>
+              <div className="rx-field" style={{ minWidth: 200 }}>
                 <label className="rx-label">开始时间</label>
-                <input type="datetime-local" className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box', colorScheme: 'dark' }}
-                  value={toDtl(logFilter.startTime)}
-                  onChange={e => setLogFilter(f => ({ ...f, startTime: fromDtl(e.target.value) }))} />
+                <DateTimePicker value={logFilter.startTime} placeholder="起始时间"
+                  onChange={v => setLogFilter(f => ({ ...f, startTime: v }))} />
               </div>
-              <div className="rx-field" style={{ minWidth: 150 }}>
+              <div className="rx-field" style={{ minWidth: 200 }}>
                 <label className="rx-label">结束时间</label>
-                <input type="datetime-local" className="rx-input" style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 4, padding: '6px 10px', width: '100%', boxSizing: 'border-box', colorScheme: 'dark' }}
-                  value={toDtl(logFilter.endTime)}
-                  onChange={e => setLogFilter(f => ({ ...f, endTime: fromDtl(e.target.value) }))} />
+                <DateTimePicker value={logFilter.endTime} placeholder="结束时间"
+                  onChange={v => setLogFilter(f => ({ ...f, endTime: v }))} />
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="rx-btn rx-btn-primary" onClick={searchLogs}>查询</button>

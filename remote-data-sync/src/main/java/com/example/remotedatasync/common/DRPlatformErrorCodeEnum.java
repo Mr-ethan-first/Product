@@ -20,6 +20,8 @@ public enum DRPlatformErrorCodeEnum {
     PARAM_ERROR("2807002001", "Parameter error", 400, false),
     /** 数据不存在 */
     DATA_NOT_FOUND("2807002003", "Data not found", 404, false),
+    /** 接口路径不存在（访问未映射的 URL） */
+    PATH_NOT_FOUND("2807002007", "Interface path not found", 404, false),
 
     /** 分页查询同步进度失败 */
     GET_SYNC_PROGRESS_LIST_FAILED("2807002002", "Failed to query sync progress list", 500, false),

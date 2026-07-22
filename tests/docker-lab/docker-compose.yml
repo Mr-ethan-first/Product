@@ -1,0 +1,59 @@
+# DRPlatform 异地灾备同步 —— 隔离式故障注入测试实验室
+# 用途：在不触碰生产/远程部署的前提下，用 Docker 起「源 MySQL」「目标 MySQL」两个独立实例，
+#       真实模拟『源库宕机 / 目标库宕机 / 同步服务进程被杀重启』等断电/断网异常场景，
+#       验证数据最终一致性与服务健壮性。
+#
+# 启动： docker compose -f tests/docker-lab/docker-compose.yml up -d
+# 停止： docker compose -f tests/docker-lab/docker-compose.yml down
+# 注意： 同步服务(remote-data-sync)本身在宿主机本地运行（非容器），通过 127.0.0.1:13306 / 13307 访问这两个库。
+version: "3.8"
+
+services:
+  src-mysql:
+    image: mysql:8.0
+    container_name: drp-src-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_INITDB_SKIP_TZINFO: "1"
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+    ports:
+      - "13306:3306"
+    volumes:
+      - ./init-src.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - src-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p123456"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: "no"
+
+  tgt-mysql:
+    image: mysql:8.0
+    container_name: drp-tgt-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_INITDB_SKIP_TZINFO: "1"
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+    ports:
+      - "13307:3306"
+    volumes:
+      - tgt-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p123456"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: "no"
+
+volumes:
+  src-data:
+  tgt-data:

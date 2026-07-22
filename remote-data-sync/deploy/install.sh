@@ -134,9 +134,9 @@ done
 echo ""
 echo "DRPlatform 后端服务端口配置："
 while true; do
-    read -p "后端服务端口 (默认 8090): " BACKEND_PORT
+    read -p "后端服务端口 (默认 8899): " BACKEND_PORT
     if [ -z "${BACKEND_PORT}" ]; then
-        BACKEND_PORT="8090"
+        BACKEND_PORT="8899"
         break
     fi
     if [[ "${BACKEND_PORT}" =~ ^[0-9]+$ ]] && [ "${BACKEND_PORT}" -gt 0 ] && [ "${BACKEND_PORT}" -lt 65536 ]; then
@@ -413,21 +413,32 @@ if systemctl is-active --quiet "${APP_NAME}" 2>/dev/null; then
     info "已停止旧服务"
 fi
 
+# 复制一键启停 / 守护进程 / 开机自启脚本到 bin 目录
+for f in watchdog.sh start.sh stop.sh boot.sh; do
+  if [ -f "${SCRIPT_DIR}/${f}" ]; then
+    cp -f "${SCRIPT_DIR}/${f}" "${APP_DIR}/bin/${f}"
+    chmod +x "${APP_DIR}/bin/${f}"
+  fi
+done
+info "控制脚本已部署: ${APP_DIR}/bin/{watchdog,start,stop,boot}.sh"
+
 cat > "${SERVICE_FILE}" <<EOF
 [Unit]
-Description=DRPlatform Disaster Recovery Sync Service
-After=network.target mysqld.service
+Description=DRPlatform Disaster Recovery Sync Service (watchdog supervised)
+After=network.target mysqld.service mariadb.service
+Wants=mysqld.service
 
 [Service]
 Type=simple
 User=root
 WorkingDirectory=${APP_DIR}
-ExecStart=/usr/bin/java -Xms256m -Xmx512m -jar ${APP_DIR}/bin/${JAR_NAME} --spring.profiles.active=linux --spring.config.additional-location=${APP_DIR}/conf/
-SuccessExitStatus=143
+# 由守护进程(watchdog)负责拉起并看护应用; 收到 SIGTERM 干净退出(退出码 0)
+ExecStart=${APP_DIR}/bin/watchdog.sh
 Restart=on-failure
-RestartSec=10
-StandardOutput=append:${APP_DIR}/logs/app.out
-StandardError=append:${APP_DIR}/logs/app.err
+RestartSec=5
+SuccessExitStatus=0 143
+StandardOutput=append:${APP_DIR}/logs/watchdog.out
+StandardError=append:${APP_DIR}/logs/watchdog.out
 
 [Install]
 WantedBy=multi-user.target
@@ -435,7 +446,7 @@ EOF
 
 systemctl daemon-reload
 systemctl enable "${APP_NAME}" >/dev/null 2>&1
-info "systemd 服务已配置: ${SERVICE_FILE}"
+info "systemd 服务已配置(守护进程模式): ${SERVICE_FILE}"
 
 # ===================== 配置 Nginx 反向代理 =====================
 step "步骤 8/8: 配置 Nginx 并启动服务"

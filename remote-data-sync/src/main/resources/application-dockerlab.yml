@@ -1,0 +1,41 @@
+# ===================== DRPlatform 故障注入实验室 profile =====================
+# 激活方式：SPRING_PROFILES_ACTIVE=dockerlab （配合 tests/docker-lab/docker-compose.yml）
+# 设计：
+#  - 元数据库仍用宿主机本地 127.0.0.1:3306/drplatform（已存在 schema，隔离实验室的管控面）。
+#  - 同步映射的「源 / 目标」指向 Docker 容器（13306 / 13307），与任何真实部署完全隔离。
+#  - 鉴权开启，贴近生产，便于同时验证安全与一致性。
+#  - 仅同步 geo_source / biz_source 两个受控库，其余用户库忽略，保证轮询秒级追平。
+spring:
+  config:
+    activate:
+      on-profile: dockerlab
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/drplatform?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: 123456
+
+app:
+  auth:
+    enabled: true
+
+drplatform:
+  standby-mode: true
+  flink:
+    enabled: false
+  engine:
+    poll-interval-ms: 2000
+  mappings:
+    - source-host: 127.0.0.1
+      source-port: 13306
+      source-user: root
+      source-password: 123456
+      target-host: 127.0.0.1
+      target-port: 13307
+      target-user: root
+      target-password: 123456
+      ignore-databases:
+        - DRPlatform
+        - "re:^(?!(geo_source|biz_source)$).*$"
+      ignore-tables: []
+      ignore-ddl-tables: []
+      transform-rules: []

@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -30,6 +31,17 @@ public class DatabaseMetadataService {
 
     private static final Set<String> SYSTEM_SCHEMAS = new HashSet<>(Arrays.asList(
             "information_schema", "mysql", "performance_schema", "sys", "DRPlatform"));
+
+    /** 标识符白名单：库名/表名只允许 [A-Za-z0-9_$]，杜绝 SQL 注入（DDL 标识符无法参数化）。 */
+    private static final java.util.regex.Pattern SAFE_IDENT =
+            java.util.regex.Pattern.compile("^[A-Za-z0-9_$]{1,64}$");
+
+    /** 校验库名/表名合法性，非法直接拒绝（防止注入与非法标识符）。对外暴露以便单测证明注入闸门。 */
+    public static void assertSafeIdentifier(String name) {
+        if (name == null || !SAFE_IDENT.matcher(name).matches()) {
+            throw new IllegalArgumentException("Illegal database/table identifier: " + name);
+        }
+    }
 
     private final DynamicShardedConnectionManager connMgr;
 
@@ -64,16 +76,19 @@ public class DatabaseMetadataService {
 
     /** 目标主机上是否存在指定库 */
     public boolean databaseExists(DatabaseConfig cfg, String dbName) {
+        assertSafeIdentifier(dbName);
         Connection conn = null;
         try {
             conn = connMgr.getConnection(cfg);
-            try (Statement st = conn.createStatement();
-                 ResultSet rs = st.executeQuery(
-                         "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='"
-                                 + dbName.replace("'", "''") + "'")) {
-                return rs.next();
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?")) {
+                ps.setString(1, dbName);
+                try (ResultSet rs = ps.executeQuery()) {
+                    return rs.next();
+                }
             }
         } catch (SQLException e) {
+            log.error("Failed to check database existence {}", dbName, e);
             return false;
         } finally {
             closeQuietly(conn, cfg);
@@ -82,6 +97,7 @@ public class DatabaseMetadataService {
 
     /** 确保目标主机上存在该库（不存在则创建），返回是否成功 */
     public boolean ensureTargetDatabase(DatabaseConfig targetHost, String dbName) {
+        assertSafeIdentifier(dbName);
         if (databaseExists(targetHost, dbName)) {
             return true;
         }
@@ -89,7 +105,8 @@ public class DatabaseMetadataService {
         try {
             conn = connMgr.getConnection(targetHost);
             try (Statement st = conn.createStatement()) {
-                st.execute("CREATE DATABASE IF NOT EXISTS `" + dbName.replace("`", "") + "` DEFAULT CHARACTER SET utf8mb4");
+                // dbName 已通过标识符白名单校验，可安全用于 DDL
+                st.execute("CREATE DATABASE IF NOT EXISTS `" + dbName + "` DEFAULT CHARACTER SET utf8mb4");
                 log.info("Created target database {} at {}", dbName, targetHost.getHost());
                 return true;
             }
@@ -103,28 +120,35 @@ public class DatabaseMetadataService {
 
     /** 提取表结构信息（列 + 主键） */
     public TableInfo getTableInfo(DatabaseConfig cfg, String dbName, String tableName) {
+        assertSafeIdentifier(dbName);
+        assertSafeIdentifier(tableName);
         List<String> columns = new ArrayList<>();
         List<String> pk = new ArrayList<>();
         Connection conn = null;
         try {
             conn = connMgr.getConnection(cfg);
             // 列
-            try (Statement st = conn.createStatement();
-                 ResultSet rs = st.executeQuery(
-                         "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
-                                 + "WHERE TABLE_SCHEMA='" + dbName + "' AND TABLE_NAME='" + tableName + "' ORDER BY ORDINAL_POSITION")) {
-                while (rs.next()) {
-                    columns.add(rs.getString(1));
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+                            + "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION")) {
+                ps.setString(1, dbName);
+                ps.setString(2, tableName);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        columns.add(rs.getString(1));
+                    }
                 }
             }
             // 主键
-            try (Statement st = conn.createStatement();
-                 ResultSet rs = st.executeQuery(
-                         "SELECT COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE "
-                                 + "WHERE TABLE_SCHEMA='" + dbName + "' AND TABLE_NAME='" + tableName
-                                 + "' AND CONSTRAINT_NAME='PRIMARY' ORDER BY ORDINAL_POSITION")) {
-                while (rs.next()) {
-                    pk.add(rs.getString(1));
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE "
+                            + "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND CONSTRAINT_NAME='PRIMARY' ORDER BY ORDINAL_POSITION")) {
+                ps.setString(1, dbName);
+                ps.setString(2, tableName);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        pk.add(rs.getString(1));
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -140,6 +164,7 @@ public class DatabaseMetadataService {
 
     /** 获取源表建表语句（去掉库限定符，便于在目标库执行） */
     public String getCreateTableSql(DatabaseConfig cfg, String tableName) {
+        assertSafeIdentifier(tableName);
         Connection conn = null;
         try {
             conn = connMgr.getConnection(cfg);
@@ -179,6 +204,7 @@ public class DatabaseMetadataService {
 
     /** 确保目标库存在该表（不存在则按源库 DDL 创建），返回是否成功 */
     public boolean ensureTargetTable(DatabaseConfig sourceDB, DatabaseConfig targetDB, String tableName) {
+        assertSafeIdentifier(tableName);
         if (!tableExists(targetDB, tableName)) {
             String ddl = getCreateTableSql(sourceDB, tableName);
             if (ddl == null) {
@@ -203,14 +229,18 @@ public class DatabaseMetadataService {
     }
 
     public boolean tableExists(DatabaseConfig cfg, String tableName) {
+        assertSafeIdentifier(tableName);
         Connection conn = null;
         try {
             conn = connMgr.getConnection(cfg);
-            try (Statement st = conn.createStatement();
-                 ResultSet rs = st.executeQuery("SHOW TABLES LIKE '" + tableName + "'")) {
-                return rs.next();
+            try (PreparedStatement ps = conn.prepareStatement("SHOW TABLES LIKE ?")) {
+                ps.setString(1, tableName);
+                try (ResultSet rs = ps.executeQuery()) {
+                    return rs.next();
+                }
             }
         } catch (SQLException e) {
+            log.error("Failed to check table existence {}", tableName, e);
             return false;
         } finally {
             closeQuietly(conn, cfg);
@@ -218,10 +248,12 @@ public class DatabaseMetadataService {
     }
 
     public void dropTargetTable(DatabaseConfig targetDB, String tableName) {
+        assertSafeIdentifier(tableName);
         Connection conn = null;
         try {
             conn = connMgr.getConnection(targetDB);
             try (Statement st = conn.createStatement()) {
+                // tableName 已通过标识符白名单校验，可安全用于 DDL
                 st.execute("DROP TABLE IF EXISTS `" + tableName + "`");
             }
         } catch (SQLException e) {
@@ -232,15 +264,18 @@ public class DatabaseMetadataService {
     }
 
     public List<String> listTables(DatabaseConfig cfg, String dbName) {
+        assertSafeIdentifier(dbName);
         List<String> tables = new ArrayList<>();
         Connection conn = null;
         try {
             conn = connMgr.getConnection(cfg);
-            try (Statement st = conn.createStatement();
-                 ResultSet rs = st.executeQuery("SELECT TABLE_NAME FROM information_schema.TABLES "
-                         + "WHERE TABLE_SCHEMA='" + dbName + "' AND TABLE_TYPE='BASE TABLE'")) {
-                while (rs.next()) {
-                    tables.add(rs.getString(1));
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_TYPE='BASE TABLE'")) {
+                ps.setString(1, dbName);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        tables.add(rs.getString(1));
+                    }
                 }
             }
         } catch (SQLException e) {

@@ -1,5 +1,6 @@
 package com.example.remotedatasync.bean;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -21,6 +22,7 @@ import java.util.List;
  * @author 50707
  */
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DatabaseMapping implements Serializable {
 
     private static final long serialVersionUID = 1L;

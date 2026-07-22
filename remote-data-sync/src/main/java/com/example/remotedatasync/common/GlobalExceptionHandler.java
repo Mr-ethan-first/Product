@@ -13,6 +13,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
@@ -84,11 +85,22 @@ public class GlobalExceptionHandler {
                 .body(Result.error(DRPlatformErrorCodeEnum.PARAM_ERROR.getCode(), "不支持的请求方法: " + ex.getMethod()));
     }
 
+    /** 资源不存在（访问未映射的路径）返回 404，而非被 catch-all 误判为 500。 */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Result<Void>> handleNoResource(NoResourceFoundException ex, HttpServletRequest request) {
+        log.warn("NoResourceFound uri={}", request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Result.error(DRPlatformErrorCodeEnum.PATH_NOT_FOUND.getCode(), "接口不存在: " + request.getRequestURI()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Result<Void>> handleUnexpected(Exception ex, HttpServletRequest request) {
-        log.error("Unexpected error uri={}", request.getRequestURI(), ex);
+        // 安全与健壮性：对外只给通用错误信息，不泄露内部异常栈/消息；详细堆栈仅留服务端日志。
+        String traceId = TraceContext.getTraceId();
+        log.error("Unexpected error uri={} traceId={}", request.getRequestURI(), traceId, ex);
+        String detail = (traceId != null) ? "服务器内部错误，请稍后重试（跟踪号：" + traceId + "）" : "服务器内部错误，请稍后重试或联系管理员";
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Result.error(DRPlatformErrorCodeEnum.SYNC_ENGINE_ERROR.getCode(), "Internal server error: " + ex.getMessage()));
+                .body(Result.error(DRPlatformErrorCodeEnum.SYNC_ENGINE_ERROR.getCode(), detail));
     }
 
     private int resolveHttpStatus(String code) {

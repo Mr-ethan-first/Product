@@ -77,7 +77,7 @@
             <resource>
                 <directory>src/main/resources</directory>
             </resource>
-            <!-- 将前端 SPA 一并打入静态资源，使后端可直接托管页面（http://127.0.0.1:8080/） -->
+            <!-- 将前端 SPA 一并打入静态资源，使后端可直接托管页面（http://127.0.0.1:8899/） -->
             <resource>
                 <directory>${project.basedir}/frontend</directory>
                 <targetPath>static</targetPath>

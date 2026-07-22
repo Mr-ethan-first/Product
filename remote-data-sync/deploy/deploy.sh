@@ -45,20 +45,34 @@ echo "==> [4/7] 初始化数据库 (${DB_HOST}:${DB_PORT})"
 mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -p"${DB_PASS}" < "${APP_DIR}/conf/db/init.sql" \
   && echo "数据库初始化完成" || echo "数据库初始化跳过(可能已存在)"
 
-echo "==> [5/7] 写入 systemd 服务单元"
+echo "==> [5/7] 部署控制脚本与 systemd 守护进程单元"
+# 复制一键启停 / 守护进程 / 开机自启脚本到 bin 目录
+SCRIPT_SRC="$(cd "$(dirname "$0")" && pwd)"
+for f in watchdog.sh start.sh stop.sh boot.sh; do
+  if [ -f "${SCRIPT_SRC}/${f}" ]; then
+    cp -f "${SCRIPT_SRC}/${f}" "${APP_DIR}/bin/${f}"
+    chmod +x "${APP_DIR}/bin/${f}"
+  fi
+done
+echo "控制脚本已部署: ${APP_DIR}/bin/{watchdog,start,stop,boot}.sh"
+
 cat > "${SERVICE_FILE}" <<EOF
 [Unit]
-Description=DRPlatform Disaster Recovery Sync Service
-After=network.target
+Description=DRPlatform Disaster Recovery Sync Service (watchdog supervised)
+After=network.target mysqld.service mariadb.service
+Wants=mysqld.service
 
 [Service]
 Type=simple
 User=root
 WorkingDirectory=${APP_DIR}
-ExecStart=/usr/bin/java -jar ${APP_DIR}/bin/${JAR_NAME} --spring.profiles.active=linux
-SuccessExitStatus=143
+# 由守护进程(watchdog)负责拉起并看护应用; 收到 SIGTERM 干净退出(退出码 0)
+ExecStart=${APP_DIR}/bin/watchdog.sh
 Restart=on-failure
-RestartSec=10
+RestartSec=5
+SuccessExitStatus=0 143
+StandardOutput=append:${APP_DIR}/logs/watchdog.out
+StandardError=append:${APP_DIR}/logs/watchdog.out
 
 [Install]
 WantedBy=multi-user.target

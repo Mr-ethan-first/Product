@@ -73,6 +73,10 @@ public class DynamicShardedConnectionManager {
         } catch (SQLException e) {
             globalSemaphore.release();
             throw e;
+        } catch (RuntimeException e) {
+            // 连接池构造/配置失败（如非法 JDBC URL）等 RuntimeException 也必须释放信号量，否则永久泄漏
+            globalSemaphore.release();
+            throw e;
         }
     }
 

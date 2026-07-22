@@ -73,6 +73,8 @@ public class SyncHostJob {
 
     /** 表级 update_time 水位（db.table -> 水位），用于增量同步 */
     private final Map<String, LocalDateTime> watermarks = new ConcurrentHashMap<>();
+    /** 表级增量水位末位主键（db.table -> 主键值），与水位配合做 keyset 续扫，避免同时间戳大批量行被 LIMIT 截断漏扫 */
+    private final Map<String, Object> watermarkKeys = new ConcurrentHashMap<>();
     /** 表结构指纹（db.table -> 列签名），用于 ALTER 检测 */
     private final Map<String, String> knownSignatures = new ConcurrentHashMap<>();
     /** 每个库当前已发现的表集合，用于 DROP 检测 */
@@ -224,7 +226,25 @@ public class SyncHostJob {
         DatabaseConfig sourceHost = mapping.toSourceHostConfig();
         DatabaseConfig targetHost = mapping.toTargetHostConfig();
 
-        List<String> dbs = metadataService.getAllUserDatabases(sourceHost, ignoreDatabases);
+        List<String> dbs;
+        // 源库可达性预检（绕过连接池，5s 超时）：被停/断网时立即标记实例为 SUSPENDED，
+        // 使监控 /sync/status 能感知异常（而非永远显示正常）。
+        // 注意：getAllUserDatabases 内部会吞掉 SQLException 返回空列表，单靠它无法触发标记，
+        // 因此这里显式用 testServerConnection 探测（每次轮询 1 次，开销极低）。
+        if (!sourceHost.testServerConnection().isOk()) {
+            log.warn("Source {} unreachable (connectivity probe), marking all instance databases SUSPENDED",
+                    sourceHost.getHost());
+            markInstanceSuspended("源库不可达: 连接探测失败");
+            return;
+        }
+        try {
+            dbs = metadataService.getAllUserDatabases(sourceHost, ignoreDatabases);
+        } catch (Exception e) {
+            // 源库不可达：将本实例下所有库的同步进度标记为中止，使监控能感知异常（而非永远显示正常）
+            log.error("Source {} unreachable, marking all instance databases SUSPENDED", sourceHost.getHost(), e);
+            markInstanceSuspended("源库不可达: " + e.getMessage());
+            return;
+        }
         for (String db : dbs) {
             if (!running) {
                 return;
@@ -232,20 +252,27 @@ public class SyncHostJob {
             if (MatchPattern.matchesAny(ignoreDatabases, db)) {
                 continue;
             }
+            boolean ok;
             try {
-                syncOneDatabase(db, sourceHost, targetHost);
+                ok = syncOneDatabase(db, sourceHost, targetHost);
             } catch (Exception e) {
                 // 单库同步失败不中断其他库的同步
                 log.error("Sync database {} failed, continuing to next db", db, e);
+                ok = false;
+            }
+            if (ok) {
+                markDbNormal(db);
+            } else {
+                markDbSuspended(db, "同步失败（目标库不可达或表结构异常）");
             }
         }
     }
 
-    /** 同步单个数据库（含建库、表扫描、DDL检测、数据同步、删除对账、进度更新） */
-    private void syncOneDatabase(String db, DatabaseConfig sourceHost, DatabaseConfig targetHost) {
+    /** 同步单个数据库（含建库、表扫描、DDL检测、数据同步、删除对账、进度更新）。返回是否成功同步。 */
+    private boolean syncOneDatabase(String db, DatabaseConfig sourceHost, DatabaseConfig targetHost) {
         if (!metadataService.ensureTargetDatabase(targetHost, db)) {
             log.warn("Skip db {}: cannot ensure target database on {}", db, targetHost.getHost());
-            return;
+            return false;
         }
         DatabaseConfig sourceDB = mapping.toSourceDB(db);
         DatabaseConfig targetDB = mapping.toTargetDB(db);
@@ -261,7 +288,7 @@ public class SyncHostJob {
 
         for (String table : tables) {
             if (!running) {
-                return;
+                return false;
             }
             if (isDmlIgnored(db, table)) {
                 continue; // DML + DDL 全忽略
@@ -308,6 +335,7 @@ public class SyncHostJob {
 
         updateProgress(db, tableCount, sourceRows, targetRows);
         log.info("Finished syncing database {} ({} tables, src={} rows, tgt={} rows)", db, tableCount, sourceRows, targetRows);
+        return true;
     }
 
     /** ALTER 检测：源表结构变化则在目标端重建表并重置水位（忽略 DDL 的表跳过） */
@@ -345,16 +373,19 @@ public class SyncHostJob {
         String wmKey = db + "." + table;
         LocalDateTime wm = watermarks.get(wmKey);
         boolean isFullSync = (wm == null);
+        List<String> pkCols = info.getPrimaryKeyColumns();
+        String pkCol = (pkCols != null && pkCols.size() == 1) ? pkCols.get(0) : null;
         long t0 = System.currentTimeMillis();
         long scanned;
         if (hasUpdateTime && wm != null) {
-            // 增量：单批有 LIMIT 上限，天然不撑爆内存
-            List<Map<String, Object>> rows = selectChanged(sourceDB, db, table, info, wm);
-            scanned = processRows(sink, db, table, info, rows, wmKey, hasUpdateTime);
+            // 增量：基于 (update_time, 主键) 的 keyset 续扫，避免同时间戳大批量行被 LIMIT 截断而丢数据
+            Object wmKeyVal = watermarkKeys.get(wmKey);
+            List<Map<String, Object>> rows = selectChanged(sourceDB, db, table, info, wm, wmKeyVal, pkCol);
+            scanned = processRows(sink, db, table, info, rows, wmKey, hasUpdateTime, pkCol);
         } else {
             // 全量：流式分页，内存恒定
             scanned = streamScan(sourceDB, db, table, info,
-                    page -> processRows(sink, db, table, info, page, wmKey, hasUpdateTime));
+                    page -> processRows(sink, db, table, info, page, wmKey, hasUpdateTime, pkCol));
         }
         long elapsed = System.currentTimeMillis() - t0;
         if (scanned > 0 || elapsed > 1000) {
@@ -371,32 +402,47 @@ public class SyncHostJob {
         return scanned;
     }
 
-    /** 单页行处理：更新水位 / 字段转换 / 入队 upsert；返回本页处理的行数 */
+    /** 单页行处理：字段转换 / 入队 upsert / 推进水位；返回本页处理的行数 */
     private long processRows(DataBaseSinkFunction sink, String db, String table, TableInfo info,
-                             List<Map<String, Object>> rows, String wmKey, boolean hasUpdateTime) {
+                             List<Map<String, Object>> rows, String wmKey, boolean hasUpdateTime, String pkCol) {
         if (rows == null || rows.isEmpty()) {
             return 0;
         }
         for (Map<String, Object> row : rows) {
-            if (hasUpdateTime) {
-                Object ut = row.get("update_time");
-                LocalDateTime lt = null;
-                if (ut instanceof Timestamp) {
-                    lt = ((Timestamp) ut).toLocalDateTime();
-                } else if (ut instanceof LocalDateTime) {
-                    lt = (LocalDateTime) ut;
-                }
-                if (lt != null) {
-                    LocalDateTime wm = watermarks.get(wmKey);
-                    if (wm == null || lt.isAfter(wm)) {
-                        watermarks.put(wmKey, lt);
-                    }
-                }
-            }
             applyTransforms(db, table, row, info.getPrimaryKeyColumns());
             sink.invoke(new RowChange(RowChange.OpType.INSERT, table, row, info.getPrimaryKeyColumns()));
         }
+        // 水位推进：取本页最大 update_time，并以末行主键作为 keyset 续扫点，
+        // 保证同时间戳多行场景下不会因 LIMIT 截断而漏扫（数据最终一致性关键）。
+        if (hasUpdateTime) {
+            LocalDateTime maxUt = null;
+            for (Map<String, Object> row : rows) {
+                LocalDateTime lt = toLocalDateTime(row.get("update_time"));
+                if (lt != null && (maxUt == null || lt.isAfter(maxUt))) {
+                    maxUt = lt;
+                }
+            }
+            if (maxUt != null) {
+                watermarks.put(wmKey, maxUt);
+                if (pkCol != null) {
+                    Object pkVal = rows.get(rows.size() - 1).get(pkCol);
+                    if (pkVal != null) {
+                        watermarkKeys.put(wmKey, pkVal);
+                    }
+                }
+            }
+        }
         return rows.size();
+    }
+
+    private static LocalDateTime toLocalDateTime(Object ut) {
+        if (ut instanceof Timestamp) {
+            return ((Timestamp) ut).toLocalDateTime();
+        }
+        if (ut instanceof LocalDateTime) {
+            return (LocalDateTime) ut;
+        }
+        return null;
     }
 
     /**
@@ -514,15 +560,28 @@ public class SyncHostJob {
         return result;
     }
 
-    private List<Map<String, Object>> selectChanged(DatabaseConfig cfg, String db, String table, TableInfo info, LocalDateTime since) {
-        String sql = "SELECT * FROM `" + db + "`.`" + table + "` WHERE `update_time` > ? ORDER BY `update_time` ASC LIMIT "
-                + (props.getEngine().getBatchSize() * 5);
+    private List<Map<String, Object>> selectChanged(DatabaseConfig cfg, String db, String table, TableInfo info,
+                                                    LocalDateTime since, Object wmKeyVal, String pkCol) {
+        String sql;
+        if (pkCol != null) {
+            // keyset 续扫：(update_time, 主键) 联合推进，避免同时间戳大批量行被 LIMIT 截断漏扫
+            sql = "SELECT * FROM `" + db + "`.`" + table + "` WHERE (`update_time` > ?) OR (`update_time` = ? AND `"
+                    + pkCol + "` > ?) ORDER BY `update_time` ASC, `" + pkCol + "` ASC LIMIT "
+                    + (props.getEngine().getBatchSize() * 5);
+        } else {
+            sql = "SELECT * FROM `" + db + "`.`" + table + "` WHERE `update_time` > ? ORDER BY `update_time` ASC LIMIT "
+                    + (props.getEngine().getBatchSize() * 5);
+        }
         List<Map<String, Object>> result = new ArrayList<>();
         Connection conn = null;
         try {
             conn = connMgr.getConnection(cfg);
             try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setObject(1, since);
+                if (pkCol != null) {
+                    ps.setObject(2, since);
+                    ps.setObject(3, wmKeyVal);
+                }
                 try (ResultSet rs = ps.executeQuery()) {
                     result.addAll(extractRows(rs));
                 }
@@ -699,6 +758,49 @@ public class SyncHostJob {
 
     private String signature(TableInfo info) {
         return String.join(",", info.getColumns()) + "#" + String.join(",", info.getPrimaryKeyColumns());
+    }
+
+    /** 同步恢复正常：将该库进度复位为同步中 / 正常偏差（被 updateProgress 周期性覆盖，这里确保即时复位）。 */
+    private void markDbNormal(String db) {
+        SyncProgress p = progressMap.get(mapping.getSourceHost() + "|" + db);
+        if (p != null) {
+            p.setState(SyncStateEnum.SYNCING.getCode());
+            p.setDeviationStatus(DelivationStatusEnum.NORMAL.getCode());
+            p.setSuspensionReason(null);
+            p.setUpdateTime(LocalDateTime.now());
+        }
+    }
+
+    /** 同步异常：将该库进度标记为中止（SUSPENDED），使监控能感知源/目标不可达。 */
+    private void markDbSuspended(String db, String reason) {
+        String key = mapping.getSourceHost() + "|" + db;
+        SyncProgress p = progressMap.computeIfAbsent(key, k -> {
+            SyncProgress sp = new SyncProgress();
+            sp.setSourceIp(mapping.getSourceHost());
+            sp.setSourceDbName(db);
+            sp.setTargetIp(mapping.getTargetHost());
+            sp.setTargetDbName(db);
+            sp.setSyncStartTime(LocalDateTime.now());
+            return sp;
+        });
+        p.setState(SyncStateEnum.SUSPENDED.getCode());
+        p.setDeviationStatus(DelivationStatusEnum.ABNORMAL.getCode());
+        p.setSuspensionReason(reason);
+        p.setUpdateTime(LocalDateTime.now());
+    }
+
+    /** 源库整体不可达：将本实例下所有库进度标记为中止。 */
+    private void markInstanceSuspended(String reason) {
+        String prefix = mapping.getSourceHost() + "|";
+        for (Map.Entry<String, SyncProgress> e : progressMap.entrySet()) {
+            if (e.getKey().startsWith(prefix)) {
+                SyncProgress p = e.getValue();
+                p.setState(SyncStateEnum.SUSPENDED.getCode());
+                p.setDeviationStatus(DelivationStatusEnum.ABNORMAL.getCode());
+                p.setSuspensionReason(reason);
+                p.setUpdateTime(LocalDateTime.now());
+            }
+        }
     }
 
     private void closeQuietly(Connection conn, DatabaseConfig cfg) {

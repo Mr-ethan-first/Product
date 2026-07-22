@@ -1,0 +1,42 @@
+-- DRPlatform 故障注入测试实验室：源库初始化
+-- 仅预建两个受控测试库（geo_source / biz_source），其余用户库由同步引擎自动发现。
+-- 字符集统一 utf8mb4，主键/唯一键用于验证 upsert 幂等。
+
+CREATE DATABASE IF NOT EXISTS `geo_source` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+CREATE DATABASE IF NOT EXISTS `biz_source` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+
+USE `geo_source`;
+
+CREATE TABLE IF NOT EXISTS `t_order` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `order_no` VARCHAR(64) NOT NULL,
+  `user_id` BIGINT DEFAULT NULL,
+  `amount` DECIMAL(12,2) DEFAULT NULL,
+  `status` INT DEFAULT NULL,
+  `remark` VARCHAR(255) DEFAULT NULL,
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_order_no` (`order_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `t_user` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `username` VARCHAR(64) NOT NULL,
+  `age` INT DEFAULT NULL,
+  `email` VARCHAR(128) DEFAULT NULL,
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+USE `biz_source`;
+
+CREATE TABLE IF NOT EXISTS `t_customer` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(64) DEFAULT NULL,
+  `phone` VARCHAR(32) DEFAULT NULL,
+  `balance` DECIMAL(10,2) DEFAULT NULL,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

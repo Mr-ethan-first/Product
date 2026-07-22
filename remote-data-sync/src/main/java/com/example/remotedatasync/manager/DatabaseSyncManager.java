@@ -9,6 +9,7 @@ import com.example.remotedatasync.dto.MappingBatchResult;
 import com.example.remotedatasync.dto.SyncProgressQuery;
 import com.example.remotedatasync.po.SyncProgress;
 import com.example.remotedatasync.service.DatabaseMetadataService;
+import com.example.remotedatasync.common.CryptoUtil;
 import com.example.remotedatasync.sync.SyncHostJob;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -151,11 +152,18 @@ public class DatabaseSyncManager {
         return findMappingByIp(ip);
     }
 
+    /** 在锁内对 mappings 做快照，避免读路径与写路径并发导致 ConcurrentModificationException。 */
+    private List<DatabaseMapping> snapshotMappings() {
+        synchronized (mappingsLock) {
+            return new ArrayList<>(properties.getMappings());
+        }
+    }
+
     public DatabaseMapping findMappingByIp(String ip) {
-        if (ip == null || properties.getMappings() == null) {
+        if (ip == null) {
             return null;
         }
-        return properties.getMappings().stream()
+        return snapshotMappings().stream()
                 .filter(m -> ip.equals(m.getSourceHost()) || ip.equals(m.getTargetHost()))
                 .findFirst().orElse(null);
     }
@@ -447,8 +455,8 @@ public class DatabaseSyncManager {
      * @param userId 当前登录用户 ID（null 表示不过滤，返回全部）
      */
     public List<DatabaseMappingVO> listMappingsVO(Long userId) {
-        List<DatabaseMapping> mappings = properties.getMappings();
-        if (mappings == null) {
+        List<DatabaseMapping> mappings = snapshotMappings();
+        if (mappings.isEmpty()) {
             return new ArrayList<>();
         }
         return mappings.stream()
@@ -461,16 +469,13 @@ public class DatabaseSyncManager {
     /** 根据 IP 获取该 IP 下的用户数据库列表（去重） */
     public List<String> getDatabasesByIp(String ips) {
         List<String> result = new ArrayList<>();
-        if (properties.getMappings() == null) {
-            return result;
-        }
         List<String> ipList = new ArrayList<>();
         if (ips != null && !ips.isEmpty()) {
             for (String s : ips.split(",")) {
                 ipList.add(s.trim());
             }
         }
-        for (DatabaseMapping mapping : properties.getMappings()) {
+        for (DatabaseMapping mapping : snapshotMappings()) {
             if (!ipList.isEmpty() && !ipList.contains(mapping.getSourceHost()) && !ipList.contains(mapping.getTargetHost())) {
                 continue;
             }
@@ -481,14 +486,14 @@ public class DatabaseSyncManager {
     }
 
     public List<DatabaseMapping> getMappings() {
-        return properties.getMappings() == null ? new ArrayList<>() : properties.getMappings();
+        return snapshotMappings();
     }
 
     public int runningJobCount() {
         return runningJobs.size();
     }
 
-    /** 启动时加载页面动态新增的映射（重启恢复） */
+    /** 启动时加载页面动态新增的映射（重启恢复），并解密其中的数据库密码。 */
     private void loadDynamicMappings() {
         File f = new File(DYNAMIC_MAPPINGS_FILE);
         if (!f.exists()) {
@@ -497,6 +502,9 @@ public class DatabaseSyncManager {
         try {
             List<DatabaseMapping> loaded = objectMapper.readValue(f, new TypeReference<List<DatabaseMapping>>() {});
             for (DatabaseMapping m : loaded) {
+                // 解密持久化的密码（历史明文值自动兼容）
+                m.setSourcePassword(CryptoUtil.decrypt(m.getSourcePassword()));
+                m.setTargetPassword(CryptoUtil.decrypt(m.getTargetPassword()));
                 if (findByKey(m.getInstanceKey()) == null) {
                     properties.getMappings().add(m);
                     dynamicKeys.add(m.getInstanceKey());
@@ -508,11 +516,18 @@ public class DatabaseSyncManager {
         }
     }
 
-    /** 持久化页面动态新增的映射到本地 JSON 文件 */
+    /** 持久化页面动态新增的映射到本地 JSON 文件（密码加密，避免明文落盘）。 */
     private void persistDynamicMappings() {
         try {
             List<DatabaseMapping> toSave = properties.getMappings().stream()
                     .filter(m -> dynamicKeys.contains(m.getInstanceKey()))
+                    .map(m -> {
+                        // 写盘前克隆并加密密码字段；内存中的真实密码保持不变（同步连接需要）
+                        DatabaseMapping copy = objectMapper.convertValue(m, DatabaseMapping.class);
+                        copy.setSourcePassword(CryptoUtil.encrypt(m.getSourcePassword()));
+                        copy.setTargetPassword(CryptoUtil.encrypt(m.getTargetPassword()));
+                        return copy;
+                    })
                     .collect(Collectors.toList());
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(new File(DYNAMIC_MAPPINGS_FILE), toSave);
             log.debug("Persisted {} dynamic mapping(s) to {}", toSave.size(), DYNAMIC_MAPPINGS_FILE);
